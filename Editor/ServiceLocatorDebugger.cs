@@ -2,7 +2,7 @@ using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 using UnityEngine;
 
-namespace DGP.ServiceLocator
+namespace DGP.ServiceLocator.Editor
 {
 #if UNITY_EDITOR && ODIN_INSPECTOR
     public class ServiceLocatorDebuggerWindow : OdinEditorWindow 

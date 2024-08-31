@@ -1,5 +1,5 @@
 {
-    "name": "ServiceLocator",
+    "name": "DGP.ServiceLocator",
     "rootNamespace": "DGP.ServiceLocator",
     "references": [],
     "includePlatforms": [],

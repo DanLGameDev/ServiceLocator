@@ -1,5 +1,6 @@
 {
-    "name": "Tests",
+    "name": "DGP.ServiceLocator.Editor.Tests",
+    "rootNamespace": "DGP.ServiceLocator.Editor.Tests",
     "optionalUnityReferences": [
         "TestAssemblies"
     ],
