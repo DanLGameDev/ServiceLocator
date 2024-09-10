@@ -131,6 +131,8 @@ namespace DGP.ServiceLocator
             if (result is TLocatableService service)
                 return service;
             
+            throw new InvalidOperationException($"Service of type {typeof(TLocatableService).Name} not found");
+            
             return null;
         }
         
@@ -179,7 +181,6 @@ namespace DGP.ServiceLocator
         }
         
         #endregion
-        
         
         private ServiceAddress FindOrCreateServiceAddress(System.Type type, System.Object context) {
             foreach (var address in RegisteredServices.Keys) {

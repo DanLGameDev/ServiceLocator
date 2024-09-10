@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 
 namespace DGP.ServiceLocator.Editor.Tests
@@ -12,12 +13,14 @@ namespace DGP.ServiceLocator.Editor.Tests
         [Test]
         public void TestSynchronousLocating() {
             var myService = new MyMockService();
+            
+            Assert.Throws<InvalidOperationException>(() => ServiceLocator.LocateService<MyMockService>());
+            
             ServiceLocator.RegisterService(myService);
         
             var locatedService = ServiceLocator.LocateService<MyMockService>();
         
             Assert.AreSame(myService, locatedService);
-        
             ServiceLocator.ClearServices();
         }
 
@@ -27,9 +30,9 @@ namespace DGP.ServiceLocator.Editor.Tests
             ServiceLocator.RegisterService(myService);
             ServiceLocator.ClearServices();
         
-            var locatedService = ServiceLocator.LocateService<MyMockService>();
-        
-            Assert.IsNull(locatedService);
+            if (ServiceLocator.TryLocateService<MyMockService>(out var locatedService)) {
+                Assert.Fail("Service should not be located");
+            }
         
             ServiceLocator.ClearServices();
         }

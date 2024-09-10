@@ -13,7 +13,7 @@ var myService = new MyService();
 ServiceLocator.RegisterService(myService);
 ```
 
-Locate the service synchronously, if the service is not found, it will return null.
+Locate the service synchronously, if the service is not found, it will throw an `InvalidOperationException`.
 ```csharp
 var locatedService = ServiceLocator.LocateService<MyTestService>();
 ```
