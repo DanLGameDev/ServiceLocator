@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace DGP.ServiceLocator
 {
@@ -47,7 +48,7 @@ namespace DGP.ServiceLocator
             RegisterService(typeof(TLocatableService), service, context);
         }
 
-        private static void RegisterService(System.Type type, ILocatableService service, object context=null) {
+        private static void RegisterService(Type type, ILocatableService service, object context=null) {
             ServiceAddress address = Instance.FindOrCreateServiceAddress(type, context);
             Instance.RegisteredServices[address] = service;
             
@@ -63,8 +64,8 @@ namespace DGP.ServiceLocator
             DeregisterService(typeof(TLocatableService), context);
         }
 
-        private static void DeregisterService(System.Type type, object context=null) {
-            ServiceAddress address = new ServiceAddress(type, context);
+        private static void DeregisterService(Type type, object context=null) {
+            ServiceAddress address = Instance.FindOrCreateServiceAddress(type, context);
             Instance.RegisteredServices.Remove(address);
         }
         
@@ -124,16 +125,15 @@ namespace DGP.ServiceLocator
         /// <param name="context">An optional context the service must exist in</param>
         /// <param name="searchMode">The search mode to use when locating the service</param>
         /// <typeparam name="TLocatableService">The type of service to locate</typeparam>
-        /// <returns></returns>
-        public static TLocatableService LocateService<TLocatableService>(object context=null, ServiceSearchMode searchMode=ServiceSearchMode.GlobalFirst) where TLocatableService : class, ILocatableService {
+        /// <returns>Returns the service if located, throws an exception if the service is not registered</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the service is not found</exception>
+        public static TLocatableService GetService<TLocatableService>(object context=null, ServiceSearchMode searchMode=ServiceSearchMode.GlobalFirst) where TLocatableService : class, ILocatableService {
             var result = Instance.LocateServiceInternal(typeof(TLocatableService), context, searchMode);
 
             if (result is TLocatableService service)
                 return service;
             
             throw new InvalidOperationException($"Service of type {typeof(TLocatableService).Name} not found");
-            
-            return null;
         }
         
         /// <summary>
@@ -149,8 +149,8 @@ namespace DGP.ServiceLocator
             return service != null;
         }
 
-        private object LocateServiceInternal(System.Type type, object context, ServiceSearchMode searchMode) {
-            Func<System.Type, object, object> locateService = (type, context) => {
+        private object LocateServiceInternal(Type type, object context, ServiceSearchMode searchMode) {
+            Func<Type, object, object> locateService = (type, context) => {
                 foreach (var entry in RegisteredServices) {
                     var address = entry.Key;
                     
@@ -182,7 +182,7 @@ namespace DGP.ServiceLocator
         
         #endregion
         
-        private ServiceAddress FindOrCreateServiceAddress(System.Type type, object context) {
+        private ServiceAddress FindOrCreateServiceAddress(Type type, object context) {
             foreach (var address in RegisteredServices.Keys) {
                 if ((address.Context == context) && (address.Type == type)) {
                     return address;

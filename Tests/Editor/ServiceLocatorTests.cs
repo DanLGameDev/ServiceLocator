@@ -14,11 +14,11 @@ namespace DGP.ServiceLocator.Editor.Tests
         public void TestSynchronousLocating() {
             var myService = new MyMockService();
             
-            Assert.Throws<InvalidOperationException>(() => ServiceLocator.LocateService<MyMockService>());
+            Assert.Throws<InvalidOperationException>(() => ServiceLocator.GetService<MyMockService>());
             
             ServiceLocator.RegisterService(myService);
         
-            var locatedService = ServiceLocator.LocateService<MyMockService>();
+            var locatedService = ServiceLocator.GetService<MyMockService>();
         
             Assert.AreSame(myService, locatedService);
             ServiceLocator.ClearServices();
