@@ -38,3 +38,16 @@ Deregister the service.
 ```csharp
 ServiceLocator.DeregisterService<MyTestService>();
 ```
+
+
+## Dependency Injection
+You can now inject your services using the `[Inject]` attribute and calling `ServiceInjector.Inject(obj);`
+
+This supports field, property, and method injection. Missing services will not throw exceptions by default but you can enable this by adding a flag to the `Inject` attribute.
+
+You can also allow for asynchronoous injection using the `Asynchronous` flag, in which case the dependency will be injected when available.
+
+- `[Inject] public MyMockService MyService;`
+- `[Inject(InjectorFlags.ExceptionIfMissing)] public MyMockService MyService;`
+- `[Inject(InjectorFlags.Asynchronous)] public MyMockService MyService;`
+- `[Inject] public void InjectServices(MyMockService myService, MyMockComplexService myComplexService) {}`

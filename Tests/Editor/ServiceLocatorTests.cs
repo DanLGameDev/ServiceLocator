@@ -26,6 +26,8 @@ namespace DGP.ServiceLocator.Editor.Tests
 
         [Test]
         public void TestClearServices() {
+            ServiceLocator.ClearServices();
+            
             var myService = new MyMockService();
             ServiceLocator.RegisterService(myService);
             ServiceLocator.ClearServices();
@@ -33,12 +35,12 @@ namespace DGP.ServiceLocator.Editor.Tests
             if (ServiceLocator.TryLocateService<MyMockService>(out var locatedService)) {
                 Assert.Fail("Service should not be located");
             }
-        
-            ServiceLocator.ClearServices();
         }
 
         [Test]
         public void TestAsynchronousLocating() {
+            ServiceLocator.ClearServices();
+            
             var myService = new MyMockService();
         
             int callbackCount = 0;
@@ -51,12 +53,12 @@ namespace DGP.ServiceLocator.Editor.Tests
             ServiceLocator.RegisterService(myService);
         
             Assert.AreEqual(1, callbackCount);
-        
-            ServiceLocator.ClearServices();
         }
 
         [Test]
         public void TestTryLocating() {
+            ServiceLocator.ClearServices();
+            
             var myService = new MyMockService();
         
             if (ServiceLocator.TryLocateService<MyMockService>(out var locatedService)) {
@@ -68,12 +70,12 @@ namespace DGP.ServiceLocator.Editor.Tests
             if (!ServiceLocator.TryLocateService<MyMockService>(out locatedService)) {
                 Assert.Fail("Service should be located");
             }
-        
-            ServiceLocator.ClearServices();
         }
 
         [Test]
         public void TestDeregistration() {
+            ServiceLocator.ClearServices();
+            
             var myService = new MyMockService();
             ServiceLocator.RegisterService(myService);
         
@@ -86,8 +88,6 @@ namespace DGP.ServiceLocator.Editor.Tests
             if (ServiceLocator.TryLocateService<MyMockService>(out locatedService)) {
                 Assert.Fail("Service should not be located");
             }
-        
-            ServiceLocator.ClearServices();
         }
 
     }

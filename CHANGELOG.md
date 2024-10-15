@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3.0] - 2024-10-15
+### Added
+- Added dependency injection support
+
 ## [1.1.0] - 2024-10-08
 ### Changes
 - Debugger window is no longer dependent on Odin Inspector

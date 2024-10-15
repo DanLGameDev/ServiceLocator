@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace DGP.ServiceLocator
 {
@@ -91,17 +92,21 @@ namespace DGP.ServiceLocator
         /// <param name="searchMode">The search mode to use when locating services</param>
         /// <typeparam name="TLocatableService">The type of service</typeparam>
         public static void LocateServiceAsync<TLocatableService>(Action<TLocatableService> callback, object context=null, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst) where TLocatableService : class, ILocatableService {
-            var result = Instance.LocateServiceInternal(typeof(TLocatableService), context, searchMode);
+            LocateServiceAsync(typeof(TLocatableService), service => callback((TLocatableService)service), context, searchMode);
+        }
+        
+        public static void LocateServiceAsync(System.Type type, Action<ILocatableService> callback, object context=null, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst) {
+            var result = Instance.LocateServiceInternal(type, context, searchMode);
 
-            if (result is TLocatableService service) {
-                callback(service);
+            if (result != null) {
+                callback((ILocatableService)result);
                 return;
             }
             
             Instance.PendingServiceQueries.Add(new ServiceQuery {
                 SearchMode = searchMode,
-                Address = new ServiceAddress(typeof(TLocatableService), context),
-                CallbackFn = (locatedService) => callback((TLocatableService)locatedService)
+                Address = new ServiceAddress(type, context),
+                CallbackFn = callback
             });
         }
         
@@ -145,6 +150,19 @@ namespace DGP.ServiceLocator
         /// <returns></returns>
         public static bool TryLocateService<TLocatableService>(out TLocatableService service, object context=null, ServiceSearchMode searchMode=ServiceSearchMode.GlobalFirst) where TLocatableService : class, ILocatableService {
             service = Instance.LocateServiceInternal(typeof(TLocatableService), context, searchMode) as TLocatableService;
+            return service != null;
+        }
+        
+        /// <summary>
+        /// Tries to locate a service and returns true if the service is found.
+        /// </summary>
+        /// <param name="type">The type of service to locate</param>
+        /// <param name="service">The service if found or null if not</param>
+        /// <param name="context">The context the service must exist in</param>
+        /// <param name="searchMode">The search mode to use when locating the service</param>
+        /// <returns></returns>
+        public static bool TryLocateService(Type type, out ILocatableService service, object context=null, ServiceSearchMode searchMode=ServiceSearchMode.GlobalFirst) {
+            service = Instance.LocateServiceInternal(type, context, searchMode) as ILocatableService;
             return service != null;
         }
 
