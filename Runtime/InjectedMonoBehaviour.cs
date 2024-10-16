@@ -4,6 +4,6 @@ namespace DGP.ServiceLocator
 {
     public abstract class InjectedMonoBehaviour : MonoBehaviour
     {
-        protected virtual void Awake() => ServiceInjector.Inject(this);
+        protected virtual void Awake() => this.InjectServices();
     }
 }
