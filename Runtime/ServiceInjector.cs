@@ -55,7 +55,7 @@ namespace DGP.ServiceLocator
         private static void InjectProperties(object target, Type type) {
             var properties = type.GetProperties(Flags);
             foreach (var property in properties) {
-                if (property.CanWrite == false || property.GetSetMethod(true).IsPublic == false)
+                if (property.CanWrite == false || property.GetSetMethod(true) == null)
                     throw new System.Exception($"Cannot inject into readonly property {property.Name}");
                 
                 var attributes = property.GetCustomAttributes(typeof(InjectAttribute), true);
