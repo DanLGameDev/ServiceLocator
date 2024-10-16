@@ -79,6 +79,27 @@ namespace DGP.ServiceLocator.Editor.Tests
             }
         }
         
+        private interface IAmMockService : ILocatableService
+        {
+            public void DoSomething();
+        }
+        
+        private class MockInterfacedService : IAmMockService
+        {
+            public int TimesCalled { get; private set; }
+            public void DoSomething() => TimesCalled++;
+        }
+
+        private class MockInterfaceSubscriber
+        {
+            [Inject] public IAmMockService MyService;
+            
+            public IAmMockService PublicService;
+            
+            [Inject] public void InjectService(IAmMockService myService) => PublicService = myService;
+            
+        }
+        
         [Test]
         public void TestInjectingOptionalDependency() {
             ServiceLocator.ClearServices();
@@ -206,6 +227,18 @@ namespace DGP.ServiceLocator.Editor.Tests
             
             Assert.AreSame(service, subscriber.MyService);
             Assert.AreSame(complexService, subscriber.MyComplexService);
+        }
+
+        [Test]
+        public void TestInterfaceInjections() {
+            MockInterfacedService service = new MockInterfacedService();
+            MockInterfaceSubscriber subscriber = new MockInterfaceSubscriber();
+            
+            ServiceLocator.RegisterService<IAmMockService>(service);
+            ServiceInjector.Inject(subscriber);
+            
+            Assert.AreSame(service, subscriber.MyService);
+            Assert.AreSame(service, subscriber.PublicService);
         }
 
     }
