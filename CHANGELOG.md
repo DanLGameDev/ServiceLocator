@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.1] - 2024-10-15
+### Added
+- Added extension method to MonoBehaviours to inject services
+- Added InjectedMonoBehaviour base class which injects on awake
+
 ## [1.3.0] - 2024-10-15
 ### Added
 - Added dependency injection support
