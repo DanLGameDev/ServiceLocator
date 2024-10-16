@@ -12,6 +12,9 @@ namespace DGP.ServiceLocator
         
         // If the dependency is not available, the injection will be performed when the dependency is available
         Asynchronous = 1 << 2,
+        
+        // Will not replace the existing value if it is already set
+        DontReplace = 1 << 3,
     }
         
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]

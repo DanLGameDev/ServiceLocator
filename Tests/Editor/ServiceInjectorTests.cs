@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace DGP.ServiceLocator.Editor.Tests
@@ -15,15 +16,16 @@ namespace DGP.ServiceLocator.Editor.Tests
             public int MyInt { get; set; }
         }
         
+        private class MyMockRequiredSubscriber
+        {
+            [Inject] public MyMockService MyService;
+        }
+        
         private class MyMockOptionalSubscriber
         {
             [Inject(InjectorFlags.Optional)] public MyMockService MyService;
         }
         
-        private class MyMockRequiredSubscriber
-        {
-            [Inject] public MyMockService MyService;
-        }
         
         private class MyMockAsynchronousSubscriber
         {
@@ -97,7 +99,12 @@ namespace DGP.ServiceLocator.Editor.Tests
             public IAmMockService PublicService;
             
             [Inject] public void InjectService(IAmMockService myService) => PublicService = myService;
-            
+        }
+
+        private class MockIrreplacableSubscriber
+        {
+            [Inject(InjectorFlags.DontReplace)] public MyMockService MyService;
+            [Inject(InjectorFlags.DontReplace)] public MyMockService MyService2 { get; set; }
         }
         
         [Test]
@@ -231,6 +238,8 @@ namespace DGP.ServiceLocator.Editor.Tests
 
         [Test]
         public void TestInterfaceInjections() {
+            ServiceLocator.ClearServices();
+            
             MockInterfacedService service = new MockInterfacedService();
             MockInterfaceSubscriber subscriber = new MockInterfaceSubscriber();
             
@@ -239,6 +248,34 @@ namespace DGP.ServiceLocator.Editor.Tests
             
             Assert.AreSame(service, subscriber.MyService);
             Assert.AreSame(service, subscriber.PublicService);
+        }
+        
+        [Test]
+        public void TestIrreplacableInjection() {
+            ServiceLocator.ClearServices();
+            
+            MyMockService service = new MyMockService();
+
+            
+            MyMockService service3 = new MyMockService();
+            MyMockService service4 = new MyMockService();
+            
+            MockIrreplacableSubscriber subscriber = new MockIrreplacableSubscriber();
+            MockIrreplacableSubscriber subscriber2 = new MockIrreplacableSubscriber();
+            
+            subscriber.MyService = service3;
+            subscriber.MyService2 = service4;
+            
+            ServiceLocator.RegisterService(service);
+            
+            ServiceInjector.Inject(subscriber);
+            ServiceInjector.Inject(subscriber2);
+            
+            Assert.AreSame(service3, subscriber.MyService);
+            Assert.AreSame(service4, subscriber.MyService2);
+            
+            Assert.AreSame(service, subscriber2.MyService);
+            Assert.AreSame(service, subscriber2.MyService2);
         }
 
     }

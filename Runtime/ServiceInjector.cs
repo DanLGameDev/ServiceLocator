@@ -33,6 +33,9 @@ namespace DGP.ServiceLocator
                 if (attributes.Length == 0) continue;
                 
                 var injectAttribute = (InjectAttribute)attributes[0];
+                
+                if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && field.GetValue(target) != null)
+                    continue;
 
                 if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
                     ServiceLocator.LocateServiceAsync(field.FieldType, service => {
@@ -53,6 +56,9 @@ namespace DGP.ServiceLocator
                 if (attributes.Length == 0) continue;
                 
                 var injectAttribute = (InjectAttribute)attributes[0];
+                
+                if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && property.GetValue(target) != null)
+                    continue;
 
                 if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
                     ServiceLocator.LocateServiceAsync(property.PropertyType, service => {
