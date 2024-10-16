@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace DGP.ServiceLocator
+namespace DGP.ServiceLocator.Injectable
 {
     public abstract class InjectedMonoBehaviour : MonoBehaviour
     {

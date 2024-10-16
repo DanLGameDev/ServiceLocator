@@ -1,6 +1,6 @@
 using System;
 
-namespace DGP.ServiceLocator
+namespace DGP.ServiceLocator.Injectable
 {
     [Flags]
     public enum InjectorFlags

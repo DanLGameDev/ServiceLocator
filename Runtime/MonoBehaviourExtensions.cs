@@ -1,3 +1,4 @@
+using DGP.ServiceLocator.Injectable;
 using UnityEngine;
 
 namespace DGP.ServiceLocator

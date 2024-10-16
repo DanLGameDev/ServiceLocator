@@ -1,3 +1,4 @@
+using DGP.ServiceLocator.Injectable;
 using UnityEditor;
 
 namespace DGP.ServiceLocator.Editor

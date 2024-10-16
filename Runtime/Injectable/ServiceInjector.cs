@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace DGP.ServiceLocator
+namespace DGP.ServiceLocator.Injectable
 {
     public static class ServiceInjector
     {
@@ -29,52 +29,60 @@ namespace DGP.ServiceLocator
         private static void InjectFields(object target, Type type) {
             var fields = type.GetFields(Flags);
             foreach (var field in fields) {
-                if (field.IsInitOnly)
-                    throw new System.Exception($"Cannot inject into readonly field {field.Name}");
+                InjectField(target, field);
+            }
+        }
+
+        private static void InjectField(object target, FieldInfo field) {
+            if (field.IsInitOnly)
+                throw new System.Exception($"Cannot inject into readonly field {field.Name}");
                 
-                var attributes = field.GetCustomAttributes(typeof(InjectAttribute), true);
-                if (attributes.Length == 0) continue;
+            var attributes = field.GetCustomAttributes(typeof(InjectAttribute), true);
+            if (attributes.Length == 0) return;
                 
-                var injectAttribute = (InjectAttribute)attributes[0];
+            var injectAttribute = (InjectAttribute)attributes[0];
                 
-                if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && field.GetValue(target) != null)
-                    continue;
+            if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && field.GetValue(target) != null)
+                return;
                 
-                if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
-                    ServiceLocator.LocateServiceAsync(field.FieldType, service => {
-                        field.SetValue(target, service);
-                    });
-                } else if (ServiceLocator.TryLocateService(field.FieldType, out ILocatableService service)) {
+            if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
+                ServiceLocator.LocateServiceAsync(field.FieldType, service => {
                     field.SetValue(target, service);
-                } else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
-                    throw new System.Exception($"Missing dependency for {field.Name}");
-                }
+                });
+            } else if (ServiceLocator.TryLocateService(field.FieldType, out ILocatableService service)) {
+                field.SetValue(target, service);
+            } else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
+                throw new System.Exception($"Missing dependency for {field.Name}");
             }
         }
 
         private static void InjectProperties(object target, Type type) {
             var properties = type.GetProperties(Flags);
             foreach (var property in properties) {
-                if (property.CanWrite == false || property.GetSetMethod(true) == null)
-                    throw new System.Exception($"Cannot inject into readonly property {property.Name}");
-                
-                var attributes = property.GetCustomAttributes(typeof(InjectAttribute), true);
-                if (attributes.Length == 0) continue;
-                
-                var injectAttribute = (InjectAttribute)attributes[0];
-                
-                if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && property.GetValue(target) != null)
-                    continue;
+                InjectProperty(target, property);
+            }
+        }
 
-                if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
-                    ServiceLocator.LocateServiceAsync(property.PropertyType, service => {
-                        property.SetValue(target, service);
-                    });
-                } else if (ServiceLocator.TryLocateService(property.PropertyType, out ILocatableService service)) {
+        private static void InjectProperty(object target, PropertyInfo property) {
+            if (property.CanWrite == false || property.GetSetMethod(true) == null)
+                throw new System.Exception($"Cannot inject into readonly property {property.Name}");
+                
+            var attributes = property.GetCustomAttributes(typeof(InjectAttribute), true);
+            if (attributes.Length == 0) return;
+                
+            var injectAttribute = (InjectAttribute)attributes[0];
+                
+            if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && property.GetValue(target) != null)
+                return;
+
+            if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
+                ServiceLocator.LocateServiceAsync(property.PropertyType, service => {
                     property.SetValue(target, service);
-                } else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
-                    throw new System.Exception($"Missing dependency for {property.Name}");
-                }
+                });
+            } else if (ServiceLocator.TryLocateService(property.PropertyType, out ILocatableService service)) {
+                property.SetValue(target, service);
+            } else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
+                throw new System.Exception($"Missing dependency for {property.Name}");
             }
         }
 
