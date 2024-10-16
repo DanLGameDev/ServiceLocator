@@ -5,11 +5,17 @@ using System.Reflection;
 
 namespace DGP.ServiceLocator
 {
-    public class ServiceInjector
+    public static class ServiceInjector
     {
         const BindingFlags Flags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
         
-        private static List<MethodInfo> _pendingMethods = new List<MethodInfo>(32);
+        private struct PendingMethod
+        {
+            public MethodInfo Method;
+            public object Target;
+        }
+        
+        private static List<PendingMethod> _pendingMethods = new List<PendingMethod>(32);
         private static List<Type> _pendingTypes = new List<Type>(16);
         
         public static void Inject(object target) {
@@ -34,7 +40,7 @@ namespace DGP.ServiceLocator
                     });
                 } else if (ServiceLocator.TryLocateService(field.FieldType, out ILocatableService service)) {
                     field.SetValue(target, service);
-                } else if (injectAttribute.Flags.HasFlag(InjectorFlags.ExceptionIfMissing)) {
+                } else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
                     throw new System.Exception($"Missing dependency for {field.Name}");
                 }
             }
@@ -54,7 +60,7 @@ namespace DGP.ServiceLocator
                     });
                 } else if (ServiceLocator.TryLocateService(property.PropertyType, out ILocatableService service)) {
                     property.SetValue(target, service);
-                } else if (injectAttribute.Flags.HasFlag(InjectorFlags.ExceptionIfMissing)) {
+                } else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
                     throw new System.Exception($"Missing dependency for {property.Name}");
                 }
             }
@@ -63,38 +69,53 @@ namespace DGP.ServiceLocator
         private static void InjectMethods(object target, Type type) {
             var methods = type.GetMethods(Flags);
             foreach (var method in methods) {
+                if (IsMethodPending(method, target)) continue;
+                
                 var attributes = method.GetCustomAttributes(typeof(InjectAttribute), true);
                 if (attributes.Length == 0) continue;
 
                 var injectAttribute = (InjectAttribute)attributes[0];
+                
                 var requiredParams = method.GetParameters()
                     .Select(parameter => parameter.ParameterType)
                     .ToArray();
                 
                 object[] resolvedInstances = requiredParams
                     .Select(paramType => ServiceLocator.TryLocateService(paramType, out var service) ? service : null)
-                    .ToArray();
+                    .ToArray<object>();
 
                 if (resolvedInstances.All(instance => instance != null)) {
                     method.Invoke(target, resolvedInstances);
                 } else if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
                     for (int i = 0; i < requiredParams.Length; i++) {
-                        if (resolvedInstances[i] == null && !_pendingMethods.Contains(method)) {
-                            var index = i;
+                        if (resolvedInstances[i] == null && !_pendingTypes.Contains(requiredParams[i])) {
                             ServiceLocator.LocateServiceAsync(requiredParams[i], HandleServiceLocated);
+                            _pendingTypes.Add(requiredParams[i]);
                         }
                     }
-                } else if (injectAttribute.Flags.HasFlag(InjectorFlags.ExceptionIfMissing)) {
+                    
+                    if (!IsMethodPending(method, target))
+                        _pendingMethods.Add(new PendingMethod { Method = method, Target = target });
+                } else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
                     throw new System.Exception($"Missing dependency for {method.Name}");
                 }
             }
+        }
+        
+        private static bool IsMethodPending(MethodInfo method, object target) {
+            foreach (var pendingMethod in _pendingMethods) {
+                if (pendingMethod.Method == method && pendingMethod.Target == target)
+                    return true;
+            }
+
+            return false;
         }
 
         private static void HandleServiceLocated(object _) {
             for (int i = _pendingMethods.Count - 1; i >= 0; i--) {
                 var method = _pendingMethods[i];
                 var type = _pendingTypes[i];
-                var requiredParams = method.GetParameters()
+                var requiredParams = method.Method.GetParameters()
                     .Select(parameter => parameter.ParameterType)
                     .ToArray();
                 
@@ -103,7 +124,7 @@ namespace DGP.ServiceLocator
                     .ToArray();
                 
                 if (resolvedInstances.All(instance => instance != null)) {
-                    method.Invoke(null, resolvedInstances);
+                    method.Method.Invoke(method.Target, resolvedInstances);
                     _pendingMethods.RemoveAt(i);
                     i--;
 

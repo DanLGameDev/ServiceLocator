@@ -5,11 +5,10 @@ namespace DGP.ServiceLocator
     [Flags]
     public enum InjectorFlags
     {
-        // Will not throw an exception if the dependency is missing
         None = 0,
         
-        // Will throw an exception if the dependency is missing
-        ExceptionIfMissing = 1 << 1,
+        // Will not throw an exception if the dependency is missing
+        Optional = 1 << 1,
         
         // If the dependency is not available, the injection will be performed when the dependency is available
         Asynchronous = 1 << 2,
@@ -20,7 +19,7 @@ namespace DGP.ServiceLocator
     {
         public readonly InjectorFlags Flags;
         
-        public InjectAttribute(InjectorFlags flags=InjectorFlags.None)
+        public InjectAttribute(InjectorFlags flags=default(InjectorFlags))
         {
             Flags = flags;
         }
