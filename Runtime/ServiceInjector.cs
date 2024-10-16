@@ -29,6 +29,9 @@ namespace DGP.ServiceLocator
         private static void InjectFields(object target, Type type) {
             var fields = type.GetFields(Flags);
             foreach (var field in fields) {
+                if (field.IsInitOnly)
+                    throw new System.Exception($"Cannot inject into readonly field {field.Name}");
+                
                 var attributes = field.GetCustomAttributes(typeof(InjectAttribute), true);
                 if (attributes.Length == 0) continue;
                 
@@ -36,7 +39,7 @@ namespace DGP.ServiceLocator
                 
                 if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && field.GetValue(target) != null)
                     continue;
-
+                
                 if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
                     ServiceLocator.LocateServiceAsync(field.FieldType, service => {
                         field.SetValue(target, service);
@@ -52,6 +55,9 @@ namespace DGP.ServiceLocator
         private static void InjectProperties(object target, Type type) {
             var properties = type.GetProperties(Flags);
             foreach (var property in properties) {
+                if (property.CanWrite == false || property.GetSetMethod(true).IsPublic == false)
+                    throw new System.Exception($"Cannot inject into readonly property {property.Name}");
+                
                 var attributes = property.GetCustomAttributes(typeof(InjectAttribute), true);
                 if (attributes.Length == 0) continue;
                 
