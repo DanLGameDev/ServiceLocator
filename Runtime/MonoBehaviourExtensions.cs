@@ -1,8 +1,10 @@
+using UnityEngine;
+
 namespace DGP.ServiceLocator
 {
-    public class MonoBehaviourExtensions
+    public static class MonoBehaviourExtensions
     {
-        public static void InjectServices(MonoBehaviourExtensions target)
+        public static void InjectServices(this MonoBehaviour target)
         {
             ServiceInjector.Inject(target);
         }
