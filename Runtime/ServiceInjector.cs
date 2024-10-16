@@ -15,8 +15,8 @@ namespace DGP.ServiceLocator
             public object Target;
         }
         
-        private static List<PendingMethod> _pendingMethods = new List<PendingMethod>(32);
-        private static List<Type> _pendingTypes = new List<Type>(16);
+        private static readonly List<PendingMethod> _pendingMethods = new List<PendingMethod>(32);
+        private static readonly List<Type> _pendingTypes = new List<Type>(16);
         
         public static void Inject(object target) {
             var type = target.GetType();
@@ -142,6 +142,11 @@ namespace DGP.ServiceLocator
                 }
             }
             
+        }
+
+        public static void ClearInjectors() {
+            _pendingMethods.Clear();
+            _pendingTypes.Clear();
         }
     }
 }

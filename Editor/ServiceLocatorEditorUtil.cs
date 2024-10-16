@@ -14,6 +14,7 @@ namespace DGP.ServiceLocator.Editor
         private static void PlayModeStateChange(PlayModeStateChange obj) {
             if (obj == UnityEditor.PlayModeStateChange.ExitingPlayMode) {
                 ServiceLocator.ClearServices();
+                ServiceInjector.ClearInjectors();
             }
         }
     }
