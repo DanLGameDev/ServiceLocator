@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.4.0] - 2024-10-16
+### Changed
+- ServiceContainer is now an instantiatable locator
+- ServiceLocator now uses a ServiceContainer instance internally
+
 ## [1.3.1] - 2024-10-15
 ### Added
 - Added extension method to MonoBehaviours to inject services
