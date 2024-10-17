@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace DGP.ServiceLocator.Injectable
 {
-    public static class ServiceInjector
+    public class ServiceInjector
     {
         const BindingFlags Flags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
         
@@ -14,11 +14,16 @@ namespace DGP.ServiceLocator.Injectable
             public MethodInfo Method;
             public object Target;
         }
+     
+        private readonly ServiceContainer _serviceContainer;
+        private readonly List<PendingMethod> _pendingMethods = new List<PendingMethod>(32);
+        private readonly List<Type> _pendingTypes = new List<Type>(16);
         
-        private static readonly List<PendingMethod> _pendingMethods = new List<PendingMethod>(32);
-        private static readonly List<Type> _pendingTypes = new List<Type>(16);
+        public ServiceInjector(ServiceContainer serviceContainer) {
+            _serviceContainer = serviceContainer;
+        }
         
-        public static void Inject(object target) {
+        public void Inject(object target) {
             var type = target.GetType();
             
             InjectFields(target, type);
@@ -26,14 +31,14 @@ namespace DGP.ServiceLocator.Injectable
             InjectMethods(target, type);
         }
 
-        private static void InjectFields(object target, Type type) {
+        private void InjectFields(object target, Type type) {
             var fields = type.GetFields(Flags);
             foreach (var field in fields) {
                 InjectField(target, field);
             }
         }
 
-        private static void InjectField(object target, FieldInfo field) {
+        private void InjectField(object target, FieldInfo field) {
             if (field.IsInitOnly)
                 throw new System.Exception($"Cannot inject into readonly field {field.Name}");
                 
@@ -56,14 +61,14 @@ namespace DGP.ServiceLocator.Injectable
             }
         }
 
-        private static void InjectProperties(object target, Type type) {
+        private void InjectProperties(object target, Type type) {
             var properties = type.GetProperties(Flags);
             foreach (var property in properties) {
                 InjectProperty(target, property);
             }
         }
 
-        private static void InjectProperty(object target, PropertyInfo property) {
+        private void InjectProperty(object target, PropertyInfo property) {
             if (property.CanWrite == false || property.GetSetMethod(true) == null)
                 throw new System.Exception($"Cannot inject into readonly property {property.Name}");
                 
@@ -86,14 +91,14 @@ namespace DGP.ServiceLocator.Injectable
             }
         }
 
-        private static void InjectMethods(object target, Type type) {
+        private void InjectMethods(object target, Type type) {
             var methods = type.GetMethods(Flags);
             foreach (var method in methods) {
                 if (IsMethodPending(method, target)) continue;
                 
                 var attributes = method.GetCustomAttributes(typeof(InjectAttribute), true);
                 if (attributes.Length == 0) continue;
-
+                
                 var injectAttribute = (InjectAttribute)attributes[0];
                 
                 var requiredParams = method.GetParameters()
@@ -121,8 +126,40 @@ namespace DGP.ServiceLocator.Injectable
                 }
             }
         }
+
+        public T CreateAndInject<T>() where T : class {
+            var constructors = typeof(T).GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            
+            if (constructors.Length == 0)
+                throw new System.Exception($"No constructors found for {typeof(T).Name}");
+            
+            //find a constructor we can satisfy
+            foreach (var constructor in constructors) {
+                // see if the constructor is marked as Inject
+                var attributes = constructor.GetCustomAttributes(typeof(InjectAttribute), true);
+                if (attributes.Length == 0) continue;
+                
+                var injectAttribute = (InjectAttribute)attributes[0];
+                
+                if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous))
+                    throw new System.Exception("Cannot use asynchronous injection on constructors");
+                
+                var parameters = constructor.GetParameters();
+                object[] resolvedInstances = parameters
+                    .Select(parameter => ServiceLocator.TryLocateService(parameter.ParameterType, out var service) ? service : null)
+                    .ToArray();
+                
+                if (injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
+                    return (T)constructor.Invoke(resolvedInstances);
+                } else if (resolvedInstances.All(instance => instance != null)) {
+                    return (T)constructor.Invoke(resolvedInstances);
+                }
+            }
+
+            return null;
+        }
         
-        private static bool IsMethodPending(MethodInfo method, object target) {
+        private bool IsMethodPending(MethodInfo method, object target) {
             foreach (var pendingMethod in _pendingMethods) {
                 if (pendingMethod.Method == method && pendingMethod.Target == target)
                     return true;
@@ -131,10 +168,10 @@ namespace DGP.ServiceLocator.Injectable
             return false;
         }
 
-        private static void HandleServiceLocated(object _) {
+        private void HandleServiceLocated(object _) {
             for (int i = _pendingMethods.Count - 1; i >= 0; i--) {
                 var method = _pendingMethods[i];
-                var type = _pendingTypes[i];
+                
                 var requiredParams = method.Method.GetParameters()
                     .Select(parameter => parameter.ParameterType)
                     .ToArray();
@@ -164,7 +201,7 @@ namespace DGP.ServiceLocator.Injectable
             
         }
 
-        public static void ClearInjectors() {
+        public void ClearInjectors() {
             _pendingMethods.Clear();
             _pendingTypes.Clear();
         }

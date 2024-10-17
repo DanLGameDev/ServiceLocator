@@ -1,13 +1,15 @@
 using System;
 using System.Collections.Generic;
+using DGP.ServiceLocator.Injectable;
 using UnityEditor;
 using UnityEngine;
 
 namespace DGP.ServiceLocator
 {
-    public class ServiceLocator
+    public static class ServiceLocator
     {
         internal static readonly ServiceContainer Instance;
+        public static ServiceInjector Injector => Instance.Injector;
 
         static ServiceLocator() {
             Instance = new ServiceContainer();
@@ -24,6 +26,8 @@ namespace DGP.ServiceLocator
             }
         }
         
+        public static void Inject(object target) => Injector.Inject(target);
+
         #region Registration
         /// <summary>
         /// Registers a service with the ServiceLocator
@@ -112,8 +116,7 @@ namespace DGP.ServiceLocator
         /// Clears all services and pending service queries
         /// </summary>
         public static void ClearServices() {
-            Instance.RegisteredServices.Clear();
-            Instance.PendingServiceQueries.Clear();
+            Instance.ClearServices();
         }
     }
 }

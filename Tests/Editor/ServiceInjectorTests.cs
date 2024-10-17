@@ -102,6 +102,15 @@ namespace DGP.ServiceLocator.Editor.Tests
             [Inject] public void InjectService(IAmMockService myService) => PublicService = myService;
         }
 
+        private class MockConstructableSubscriber
+        {
+            public readonly MyMockService MyService;
+            
+            [Inject] public MockConstructableSubscriber(MyMockService myService) {
+                MyService = myService;
+            }
+        }
+
         private class MockIrreplacableSubscriber
         {
             [Inject(InjectorFlags.DontReplace)] public MyMockService MyService;
@@ -115,11 +124,11 @@ namespace DGP.ServiceLocator.Editor.Tests
             var service = new MyMockService();
             var subscriber = new MyMockOptionalSubscriber();
             
-            ServiceInjector.Inject(subscriber);
+            ServiceLocator.Inject(subscriber);
             Assert.IsNull(subscriber.MyService);
             
             ServiceLocator.RegisterService(service);
-            ServiceInjector.Inject(subscriber);
+            ServiceLocator.Inject(subscriber);
             Assert.AreSame(service, subscriber.MyService);
         }
         
@@ -130,10 +139,10 @@ namespace DGP.ServiceLocator.Editor.Tests
             var service = new MyMockService();
             var subscriber = new MyMockRequiredSubscriber();
             
-            Assert.Throws<System.Exception>(() => ServiceInjector.Inject(subscriber));
+            Assert.Throws<System.Exception>(() => ServiceLocator.Inject(subscriber));
             
             ServiceLocator.RegisterService(service);
-            ServiceInjector.Inject(subscriber);
+            ServiceLocator.Inject(subscriber);
             Assert.AreSame(service, subscriber.MyService);
         }
         
@@ -144,7 +153,7 @@ namespace DGP.ServiceLocator.Editor.Tests
             var service = new MyMockService();
             var subscriber = new MyMockAsynchronousSubscriber();
             
-            ServiceInjector.Inject(subscriber);
+            ServiceLocator.Inject(subscriber);
             Assert.IsNull(subscriber.MyService);
             
             ServiceLocator.RegisterService(service);
@@ -160,7 +169,7 @@ namespace DGP.ServiceLocator.Editor.Tests
             var subscriber = new MyMockMethodSubscriber();
             
             ServiceLocator.RegisterService(service);
-            ServiceInjector.Inject(subscriber);
+            ServiceLocator.Inject(subscriber);
             
             Assert.AreSame(service, subscriber.GetService());
         }
@@ -173,7 +182,7 @@ namespace DGP.ServiceLocator.Editor.Tests
             var service = new MyMockService();
             
             ServiceLocator.RegisterService(service);
-            ServiceInjector.Inject(subscriber);
+            ServiceLocator.Inject(subscriber);
             
             Assert.AreSame(service, subscriber.MyService);
         }
@@ -188,7 +197,7 @@ namespace DGP.ServiceLocator.Editor.Tests
             
             ServiceLocator.RegisterService(service);
             ServiceLocator.RegisterService(complexService);
-            ServiceInjector.Inject(subscriber);
+            ServiceLocator.Inject(subscriber);
             
             Assert.AreSame(service, subscriber.MyService);
             Assert.AreSame(complexService, subscriber.MyComplexService);
@@ -202,7 +211,7 @@ namespace DGP.ServiceLocator.Editor.Tests
             var complexService = new MyMockComplexService();
             var subscriber = new MyMockComplexAsyncMethodSubscriber();
             
-            ServiceInjector.Inject(subscriber);
+            ServiceLocator.Inject(subscriber);
             
             Assert.IsNull(subscriber.MyService);
             Assert.IsNull(subscriber.MyComplexService);
@@ -228,10 +237,10 @@ namespace DGP.ServiceLocator.Editor.Tests
             
             ServiceLocator.RegisterService(service);
             
-            Assert.Throws<System.Exception>(() => ServiceInjector.Inject(subscriber));
+            Assert.Throws<System.Exception>(() => ServiceLocator.Inject(subscriber));
             
             ServiceLocator.RegisterService(complexService);
-            ServiceInjector.Inject(subscriber);
+            ServiceLocator.Inject(subscriber);
             
             Assert.AreSame(service, subscriber.MyService);
             Assert.AreSame(complexService, subscriber.MyComplexService);
@@ -245,7 +254,7 @@ namespace DGP.ServiceLocator.Editor.Tests
             MockInterfaceSubscriber subscriber = new MockInterfaceSubscriber();
             
             ServiceLocator.RegisterService<IAmMockService>(service);
-            ServiceInjector.Inject(subscriber);
+            ServiceLocator.Inject(subscriber);
             
             Assert.AreSame(service, subscriber.MyService);
             Assert.AreSame(service, subscriber.PublicService);
@@ -269,14 +278,32 @@ namespace DGP.ServiceLocator.Editor.Tests
             
             ServiceLocator.RegisterService(service);
             
-            ServiceInjector.Inject(subscriber);
-            ServiceInjector.Inject(subscriber2);
+            ServiceLocator.Inject(subscriber);
+            ServiceLocator.Inject(subscriber2);
             
             Assert.AreSame(service3, subscriber.MyService);
             Assert.AreSame(service4, subscriber.MyService2);
             
             Assert.AreSame(service, subscriber2.MyService);
             Assert.AreSame(service, subscriber2.MyService2);
+        }
+        
+        [Test]
+        public void TestConstructableInjection() {
+            ServiceLocator.ClearServices();
+            
+            MyMockService service = new MyMockService();
+
+            var subscriber = ServiceLocator.Injector.CreateAndInject<MockConstructableSubscriber>();
+            
+            Assert.IsNull(subscriber);
+            
+            ServiceLocator.RegisterService(service);
+            
+            subscriber = ServiceLocator.Injector.CreateAndInject<MockConstructableSubscriber>();
+            
+            Assert.IsNotNull(subscriber);
+            Assert.AreSame(service, subscriber.MyService);
         }
 
     }

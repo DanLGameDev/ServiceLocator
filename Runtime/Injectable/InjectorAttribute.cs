@@ -17,7 +17,7 @@ namespace DGP.ServiceLocator.Injectable
         DontReplace = 1 << 3,
     }
         
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Constructor)]
     public class InjectAttribute : Attribute
     {
         public readonly InjectorFlags Flags;

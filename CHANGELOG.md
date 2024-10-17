@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.4.1] - 2024-10-17
+### Added
+- Added constructor injection
+
 ## [1.4.0] - 2024-10-16
 ### Changed
 - ServiceContainer is now an instantiatable locator

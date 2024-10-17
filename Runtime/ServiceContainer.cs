@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DGP.ServiceLocator.Injectable;
 
 namespace DGP.ServiceLocator
 {
@@ -7,6 +8,12 @@ namespace DGP.ServiceLocator
     {
         internal readonly Dictionary<ServiceAddress, ILocatableService> RegisteredServices = new();
         internal readonly List<ServiceQuery> PendingServiceQueries = new();
+
+        public readonly ServiceInjector Injector;
+        
+        public ServiceContainer() {
+            Injector = new ServiceInjector(this);
+        }
         
         #region Registration
         /// <summary>
