@@ -205,5 +205,74 @@ namespace DGP.ServiceLocator.Injectable
             _pendingMethods.Clear();
             _pendingTypes.Clear();
         }
+
+
+        public static T InjectFromSource<T>(object source, T target) {
+            var sourceFields = source.GetType().GetFields(Flags);
+
+            foreach (var sourceField in sourceFields) {
+                var provideAttributes = sourceField.GetCustomAttributes(typeof(ProvideAttribute), true);
+                if (provideAttributes.Length == 0) continue;
+                
+                var provideAttribute = (ProvideAttribute)provideAttributes[0];
+                var serviceType = provideAttribute.ServiceType ?? sourceField.FieldType;
+                
+                var value = sourceField.GetValue(source);
+                
+                var targetFields = target.GetType().GetFields(Flags);
+                foreach (var targetField in targetFields) {
+                    if (targetField.FieldType != serviceType) continue;
+                    
+                    var injectAttributes = targetField.GetCustomAttributes(typeof(InjectAttribute), true);
+                    if (injectAttributes.Length == 0) continue;
+                    
+                    targetField.SetValue(target, value);
+                }
+                
+                var targetProperties = target.GetType().GetProperties(Flags);
+                foreach (var targetProperty in targetProperties) {
+                    if (targetProperty.PropertyType != serviceType) continue;
+                    
+                    var injectAttributes = targetProperty.GetCustomAttributes(typeof(InjectAttribute), true);
+                    if (injectAttributes.Length == 0) continue;
+                    
+                    targetProperty.SetValue(target, value);
+                }
+            }
+            
+            var sourceProperties = source.GetType().GetProperties(Flags);
+            
+            foreach (var sourceProperty in sourceProperties) {
+                var provideAttributes = sourceProperty.GetCustomAttributes(typeof(ProvideAttribute), true);
+                if (provideAttributes.Length == 0) continue;
+                
+                var provideAttribute = (ProvideAttribute)provideAttributes[0];
+                var serviceType = provideAttribute.ServiceType ?? sourceProperty.PropertyType;
+                
+                var value = sourceProperty.GetValue(source);
+                
+                var targetFields = target.GetType().GetFields(Flags);
+                foreach (var targetField in targetFields) {
+                    if (targetField.FieldType != serviceType) continue;
+                    
+                    var injectAttributes = targetField.GetCustomAttributes(typeof(InjectAttribute), true);
+                    if (injectAttributes.Length == 0) continue;
+                    
+                    targetField.SetValue(target, value);
+                }
+                
+                var targetProperties = target.GetType().GetProperties(Flags);
+                foreach (var targetProperty in targetProperties) {
+                    if (targetProperty.PropertyType != serviceType) continue;
+                    
+                    var injectAttributes = targetProperty.GetCustomAttributes(typeof(InjectAttribute), true);
+                    if (injectAttributes.Length == 0) continue;
+                    
+                    targetProperty.SetValue(target, value);
+                }
+            }
+
+            return target;
+        }
     }
 }

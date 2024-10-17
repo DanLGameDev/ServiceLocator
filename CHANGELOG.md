@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.4.2] - 2024-10-17
+### Added
+- Local injection from any object
+
 ## [1.4.1] - 2024-10-17
 ### Added
 - Added constructor injection

@@ -116,6 +116,27 @@ namespace DGP.ServiceLocator.Editor.Tests
             [Inject(InjectorFlags.DontReplace)] public MyMockService MyService;
             [Inject(InjectorFlags.DontReplace)] public MyMockService MyService2 { get; set; }
         }
+
+        private class MockParentClass
+        {
+            [Provide]public readonly MyMockService MyMockService = new();
+            public MockChildClass CreateChild() => this.InjectLocalServices<MockChildClass>(new MockChildClass());
+        }
+        
+        private class MockChildClass : MockParentClass
+        {
+            [Inject] public MyMockService MockService;
+        }
+
+        [Test]
+        public void TestLocalServiceInjection() {
+            ServiceLocator.ClearServices();
+            
+            MockParentClass parent = new MockParentClass();
+            var child = parent.CreateChild();
+            
+            Assert.AreSame(child.MockService, parent.MyMockService);
+        }
         
         [Test]
         public void TestInjectingOptionalDependency() {
