@@ -120,7 +120,7 @@ namespace DGP.ServiceLocator.Editor.Tests
         private class MockParentClass
         {
             [Provide]public readonly MyMockService MyMockService = new();
-            public MockChildClass CreateChild() => this.InjectLocalServices<MockChildClass>(new MockChildClass());
+            public MockChildClass CreateChild() => this.InjectLocalServices(new MockChildClass());
         }
         
         private class MockChildClass : MockParentClass
