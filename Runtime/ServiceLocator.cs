@@ -9,6 +9,7 @@ namespace DGP.ServiceLocator
     public static class ServiceLocator
     {
         internal static readonly ServiceContainer Instance;
+        public static ServiceContainer Container => Instance;
         public static ServiceInjector Injector => Instance.Injector;
 
         static ServiceLocator() {
