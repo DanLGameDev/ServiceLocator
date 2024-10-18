@@ -90,7 +90,8 @@ namespace DGP.ServiceLocator.Injectable
         private void InjectMethods(object target, Type type) {
             var methods = type.GetMethods(Flags);
             foreach (var method in methods) {
-                if (IsMethodPending(method, target)) continue;
+                if (IsMethodPending(method, target))
+                    continue;
                 
                 var injectAttribute = FindInjectAttribute(method);
                 
@@ -133,11 +134,23 @@ namespace DGP.ServiceLocator.Injectable
         
         private FieldInfo[] GetInjectableFields(object target, Type type) {
             var fields = type.GetFields(Flags);
+            
+            foreach (var field in fields) {
+                if (field.IsInitOnly)
+                    throw new Exception($"Cannot inject into readonly field {field.Name}");
+            }
+            
             return GetInjectableMembersOfType(target, fields);
         }
         
         private PropertyInfo[] GetInjectableProperties(object target, Type type) {
             var properties = type.GetProperties(Flags);
+
+            foreach (var property in properties) {
+                if (property.CanWrite == false || property.GetSetMethod(true) == null)
+                    throw new Exception($"Cannot inject into readonly property {property.Name}");
+            }
+
             return GetInjectableMembersOfType(target, properties);
         }
         
@@ -152,14 +165,6 @@ namespace DGP.ServiceLocator.Injectable
             foreach (T member in members) {
                 var injectAttribute = FindInjectAttribute(member);
                 if (injectAttribute == null) continue;
-                
-                if (member is FieldInfo { IsInitOnly: true } field)
-                    throw new Exception($"Cannot inject into readonly field {field.Name}");
-                
-                if (member is PropertyInfo propertyInfo) {
-                    if (propertyInfo.CanWrite == false || propertyInfo.GetSetMethod(true) == null)
-                        throw new Exception($"Cannot inject into readonly property {propertyInfo.Name}");
-                }
                 
                 if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && member.GetMemberValue(target) != null)
                     continue;
