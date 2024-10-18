@@ -20,10 +20,12 @@ namespace DGP.ServiceLocator.Injectable
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Constructor)]
     public class InjectAttribute : Attribute
     {
+        public readonly Type ServiceType;
         public readonly InjectorFlags Flags;
         
-        public InjectAttribute(InjectorFlags flags=default(InjectorFlags))
+        public InjectAttribute(InjectorFlags flags=default(InjectorFlags), Type serviceType = null)
         {
+            ServiceType = serviceType;
             Flags = flags;
         }
     }

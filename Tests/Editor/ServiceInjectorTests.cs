@@ -119,13 +119,34 @@ namespace DGP.ServiceLocator.Editor.Tests
 
         private class MockParentClass
         {
-            [Provide]public readonly MyMockService MyMockService = new();
+            [Provide] public readonly MyMockService MyMockService = new();
             public MockChildClass CreateChild() => this.InjectLocalServices(new MockChildClass());
         }
         
         private class MockChildClass : MockParentClass
         {
             [Inject] public MyMockService MockService;
+        }
+
+        private interface IMockService : ILocatableService { }
+        private class InterfacedServiceA : IMockService { }
+        
+        private class MockedInterfaceSubscriber
+        {
+            [Inject(serviceType:typeof(InterfacedServiceA))] public IMockService MyService;
+        }
+
+        [Test]
+        public void TestInjectionTypeSpecification() {
+            ServiceLocator.ClearServices();
+            
+            InterfacedServiceA service = new();
+            MockedInterfaceSubscriber subscriber = new();
+            
+            ServiceLocator.RegisterService(service);
+            ServiceLocator.Inject(subscriber);
+            
+            Assert.AreSame(service, subscriber.MyService);
         }
 
         [Test]

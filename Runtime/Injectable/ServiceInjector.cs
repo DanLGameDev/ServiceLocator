@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Sirenix.Utilities;
 
 namespace DGP.ServiceLocator.Injectable
 {
@@ -32,37 +33,33 @@ namespace DGP.ServiceLocator.Injectable
         }
 
         private void InjectFields(object target, Type type) {
-            var fields = type.GetFields(Flags);
+            var fields = GetInjectableFields(target, type);
             foreach (var field in fields) {
                 InjectField(target, field);
             }
         }
-
+        
         private void InjectField(object target, FieldInfo field) {
-            if (field.IsInitOnly)
-                throw new System.Exception($"Cannot inject into readonly field {field.Name}");
-                
-            var attributes = field.GetCustomAttributes(typeof(InjectAttribute), true);
-            if (attributes.Length == 0) return;
-                
-            var injectAttribute = (InjectAttribute)attributes[0];
-                
-            if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && field.GetValue(target) != null)
-                return;
-                
+            var injectAttribute = FindInjectAttribute(field);
+            
+            if (injectAttribute == null)
+                throw new Exception($"Cannot find attribute on field marked for injection {field.Name}");
+            
+            Type intendedType = injectAttribute.ServiceType ?? field.FieldType;
+            
             if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
-                ServiceLocator.LocateServiceAsync(field.FieldType, service => {
+                ServiceLocator.LocateServiceAsync(intendedType, service => {
                     field.SetValue(target, service);
                 });
-            } else if (ServiceLocator.TryLocateService(field.FieldType, out ILocatableService service)) {
+            } else if (ServiceLocator.TryLocateService(intendedType, out ILocatableService service)) {
                 field.SetValue(target, service);
             } else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
-                throw new System.Exception($"Missing dependency for {field.Name}");
+                throw new Exception($"Missing dependency for {field.Name}");
             }
         }
-
+        
         private void InjectProperties(object target, Type type) {
-            var properties = type.GetProperties(Flags);
+            var properties = GetInjectableProperties(target, type);
             foreach (var property in properties) {
                 InjectProperty(target, property);
             }
@@ -72,19 +69,18 @@ namespace DGP.ServiceLocator.Injectable
             if (property.CanWrite == false || property.GetSetMethod(true) == null)
                 throw new System.Exception($"Cannot inject into readonly property {property.Name}");
                 
-            var attributes = property.GetCustomAttributes(typeof(InjectAttribute), true);
-            if (attributes.Length == 0) return;
-                
-            var injectAttribute = (InjectAttribute)attributes[0];
-                
-            if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && property.GetValue(target) != null)
-                return;
-
+            var injectAttribute = FindInjectAttribute(property);
+            
+            if (injectAttribute == null)
+                throw new Exception($"Cannot find attribute on field marked for injection {property.Name}");
+            
+            Type intendedType = injectAttribute.ServiceType ?? property.PropertyType;
+            
             if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
-                ServiceLocator.LocateServiceAsync(property.PropertyType, service => {
+                ServiceLocator.LocateServiceAsync(intendedType, service => {
                     property.SetValue(target, service);
                 });
-            } else if (ServiceLocator.TryLocateService(property.PropertyType, out ILocatableService service)) {
+            } else if (ServiceLocator.TryLocateService(intendedType, out ILocatableService service)) {
                 property.SetValue(target, service);
             } else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
                 throw new System.Exception($"Missing dependency for {property.Name}");
@@ -96,10 +92,10 @@ namespace DGP.ServiceLocator.Injectable
             foreach (var method in methods) {
                 if (IsMethodPending(method, target)) continue;
                 
-                var attributes = method.GetCustomAttributes(typeof(InjectAttribute), true);
-                if (attributes.Length == 0) continue;
+                var injectAttribute = FindInjectAttribute(method);
                 
-                var injectAttribute = (InjectAttribute)attributes[0];
+                if (injectAttribute == null)
+                    continue;
                 
                 var requiredParams = method.GetParameters()
                     .Select(parameter => parameter.ParameterType)
@@ -126,6 +122,56 @@ namespace DGP.ServiceLocator.Injectable
                 }
             }
         }
+        
+        #region Member Location
+        private InjectAttribute FindInjectAttribute(MemberInfo member) {
+            var attributes = member.GetCustomAttributes(typeof(InjectAttribute), true);
+            if (attributes.Length == 0) return null;
+            
+            return (InjectAttribute)attributes[0];
+        }
+        
+        private FieldInfo[] GetInjectableFields(object target, Type type) {
+            var fields = type.GetFields(Flags);
+            return GetInjectableMembersOfType(target, fields);
+        }
+        
+        private PropertyInfo[] GetInjectableProperties(object target, Type type) {
+            var properties = type.GetProperties(Flags);
+            return GetInjectableMembersOfType(target, properties);
+        }
+        
+        private MethodInfo[] GetInjectableMethods(object target, Type type) {
+            var methods = type.GetMethods(Flags);
+            return GetInjectableMembersOfType(target, methods);
+        }
+
+        private T[] GetInjectableMembersOfType<T>(object target, T[] members) where T : MemberInfo {
+            List<T> injectableMembers = new List<T>(members.Length);
+
+            foreach (T member in members) {
+                var injectAttribute = FindInjectAttribute(member);
+                if (injectAttribute == null) continue;
+                
+                if (member is FieldInfo { IsInitOnly: true } field)
+                    throw new Exception($"Cannot inject into readonly field {field.Name}");
+                
+                if (member is PropertyInfo propertyInfo) {
+                    if (propertyInfo.CanWrite == false || propertyInfo.GetSetMethod(true) == null)
+                        throw new Exception($"Cannot inject into readonly property {propertyInfo.Name}");
+                }
+                
+                if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && member.GetMemberValue(target) != null)
+                    continue;
+                
+                injectableMembers.Add(member);
+            }
+            
+            return injectableMembers.ToArray();
+        }
+        #endregion
+
+
 
         public T CreateAndInject<T>() where T : class {
             var constructors = typeof(T).GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -207,72 +253,5 @@ namespace DGP.ServiceLocator.Injectable
         }
 
 
-        public static T InjectFromSource<T>(object source, T target) {
-            var sourceFields = source.GetType().GetFields(Flags);
-
-            foreach (var sourceField in sourceFields) {
-                var provideAttributes = sourceField.GetCustomAttributes(typeof(ProvideAttribute), true);
-                if (provideAttributes.Length == 0) continue;
-                
-                var provideAttribute = (ProvideAttribute)provideAttributes[0];
-                var serviceType = provideAttribute.ServiceType ?? sourceField.FieldType;
-                
-                var value = sourceField.GetValue(source);
-                
-                var targetFields = target.GetType().GetFields(Flags);
-                foreach (var targetField in targetFields) {
-                    if (targetField.FieldType != serviceType) continue;
-                    
-                    var injectAttributes = targetField.GetCustomAttributes(typeof(InjectAttribute), true);
-                    if (injectAttributes.Length == 0) continue;
-                    
-                    targetField.SetValue(target, value);
-                }
-                
-                var targetProperties = target.GetType().GetProperties(Flags);
-                foreach (var targetProperty in targetProperties) {
-                    if (targetProperty.PropertyType != serviceType) continue;
-                    
-                    var injectAttributes = targetProperty.GetCustomAttributes(typeof(InjectAttribute), true);
-                    if (injectAttributes.Length == 0) continue;
-                    
-                    targetProperty.SetValue(target, value);
-                }
-            }
-            
-            var sourceProperties = source.GetType().GetProperties(Flags);
-            
-            foreach (var sourceProperty in sourceProperties) {
-                var provideAttributes = sourceProperty.GetCustomAttributes(typeof(ProvideAttribute), true);
-                if (provideAttributes.Length == 0) continue;
-                
-                var provideAttribute = (ProvideAttribute)provideAttributes[0];
-                var serviceType = provideAttribute.ServiceType ?? sourceProperty.PropertyType;
-                
-                var value = sourceProperty.GetValue(source);
-                
-                var targetFields = target.GetType().GetFields(Flags);
-                foreach (var targetField in targetFields) {
-                    if (targetField.FieldType != serviceType) continue;
-                    
-                    var injectAttributes = targetField.GetCustomAttributes(typeof(InjectAttribute), true);
-                    if (injectAttributes.Length == 0) continue;
-                    
-                    targetField.SetValue(target, value);
-                }
-                
-                var targetProperties = target.GetType().GetProperties(Flags);
-                foreach (var targetProperty in targetProperties) {
-                    if (targetProperty.PropertyType != serviceType) continue;
-                    
-                    var injectAttributes = targetProperty.GetCustomAttributes(typeof(InjectAttribute), true);
-                    if (injectAttributes.Length == 0) continue;
-                    
-                    targetProperty.SetValue(target, value);
-                }
-            }
-
-            return target;
-        }
     }
 }

@@ -1,4 +1,7 @@
 # Changelog
+## [1.4.3] - 2024-10-18
+### Added
+- Ability to specify a different type for injection
 
 ## [1.4.2] - 2024-10-17
 ### Added
