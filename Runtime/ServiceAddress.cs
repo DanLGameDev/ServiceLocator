@@ -2,7 +2,7 @@ using System;
 
 namespace DGP.ServiceLocator
 {
-    internal readonly struct ServiceAddress : IEquatable<ServiceAddress>
+    public readonly struct ServiceAddress : IEquatable<ServiceAddress>
     {
         public readonly Type Type;
         public readonly object Context;

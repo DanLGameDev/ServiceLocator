@@ -6,13 +6,14 @@ namespace DGP.ServiceLocator
 {
     public class ServiceContainer
     {
-        internal readonly Dictionary<ServiceAddress, ILocatableService> RegisteredServices = new();
-        internal readonly List<ServiceQuery> PendingServiceQueries = new();
+        public readonly Dictionary<ServiceAddress, ILocatableService> RegisteredServices = new();
+        public readonly List<ServiceQuery> PendingServiceQueries = new();
 
-        public readonly ServiceInjector Injector;
+        private readonly Lazy<ServiceInjector> _injector;
+        public ServiceInjector Injector => _injector.Value;
         
         public ServiceContainer() {
-            Injector = new ServiceInjector(this);
+            _injector = new Lazy<ServiceInjector>(() => new ServiceInjector(this));
         }
         
         #region Registration
@@ -73,7 +74,7 @@ namespace DGP.ServiceLocator
             LocateServiceAsync(typeof(TLocatableService), service => callback((TLocatableService)service), context, searchMode);
         }
         
-        public void LocateServiceAsync(System.Type type, Action<ILocatableService> callback, object context=null, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst) {
+        public void LocateServiceAsync(Type type, Action<ILocatableService> callback, object context=null, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst) {
             var result = LocateServiceInternal(type, context, searchMode);
 
             if (result != null) {
@@ -145,11 +146,11 @@ namespace DGP.ServiceLocator
         }
 
         private object LocateServiceInternal(Type type, object context, ServiceSearchMode searchMode) {
-            Func<Type, object, object> locateService = (type, context) => {
+            Func<Type, object, object> locateService = (serviceType, context) => {
                 foreach (var entry in RegisteredServices) {
                     var address = entry.Key;
                     
-                    if (address.Type == type && Equals(address.Context, context)) {
+                    if (address.Type == serviceType && Equals(address.Context, context)) {
                         return entry.Value;
                     }
                 }

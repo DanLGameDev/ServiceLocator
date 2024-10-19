@@ -2,7 +2,7 @@ using System;
 
 namespace DGP.ServiceLocator
 {
-    internal class ServiceQuery
+    public class ServiceQuery
     {
         public ServiceSearchMode SearchMode;
         public ServiceAddress Address;

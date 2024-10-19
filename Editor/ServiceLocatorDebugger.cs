@@ -45,7 +45,7 @@ namespace DGP.ServiceLocator.Editor
             
             EditorGUILayout.LabelField("Registered Services", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
-            foreach (var service in ServiceLocator.Instance.RegisteredServices)
+            foreach (var service in ServiceLocator.Container.RegisteredServices)
             {
                 if (service.Value != null)
                 {
@@ -57,7 +57,7 @@ namespace DGP.ServiceLocator.Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Pending Queries", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
-            foreach (var query in ServiceLocator.Instance.PendingServiceQueries)
+            foreach (var query in ServiceLocator.Container.PendingServiceQueries)
             {
                 EditorGUILayout.LabelField($"{query.Address.Type.Name} - {query.SearchMode} (Context: {query.Address.Context?.ToString() ?? "null"})");
             }
