@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.2] - 2024-10-19
+### Changes
+- Improved test coverage
+
 ## [1.5.0] - 2024-10-19
 ### Changes
 - Extensive code refactoring to reduce complexity
