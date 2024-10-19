@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Sirenix.Utilities;
+using DGP.ServiceLocator.Extensions;
 
 namespace DGP.ServiceLocator.Injectable
 {
     public class ServiceInjector
     {
-        const BindingFlags Flags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
+        private const BindingFlags Flags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
         
         private struct PendingMethod
         {
@@ -25,77 +25,66 @@ namespace DGP.ServiceLocator.Injectable
         }
         
         public void Inject(object target) {
-            var type = target.GetType();
-            
-            InjectFields(target, type);
-            InjectProperties(target, type);
-            InjectMethods(target, type);
+            InjectFields(target);
+            InjectProperties(target);
+            InjectMethods(target);
         }
 
-        private void InjectFields(object target, Type type) {
-            var fields = GetInjectableFields(target, type);
-            foreach (var field in fields) {
-                InjectField(target, field);
+        private void InjectFields(object target) {
+            var fields = target.GetSettableFieldsWithAttribute<InjectAttribute>(Flags);
+
+            foreach (var (fieldInfo, injectAttribute) in fields) {
+                if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && fieldInfo.GetMemberValueOrNull(target) != null)
+                    continue;
+                
+                InjectField(target, fieldInfo, injectAttribute);
             }
         }
         
-        private void InjectField(object target, FieldInfo field) {
-            var injectAttribute = FindInjectAttribute(field);
-            
-            if (injectAttribute == null)
-                throw new Exception($"Cannot find attribute on field marked for injection {field.Name}");
-            
+        private void InjectField(object target, FieldInfo field, InjectAttribute injectAttribute) {
             Type intendedType = injectAttribute.ServiceType ?? field.FieldType;
             
             if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
-                ServiceLocator.LocateServiceAsync(intendedType, service => {
+                _serviceContainer.LocateServiceAsync(intendedType, service => {
                     field.SetValue(target, service);
                 });
-            } else if (ServiceLocator.TryLocateService(intendedType, out ILocatableService service)) {
+            } else if (_serviceContainer.TryLocateService(intendedType, out ILocatableService service)) {
                 field.SetValue(target, service);
             } else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
                 throw new Exception($"Missing dependency for {field.Name}");
             }
         }
         
-        private void InjectProperties(object target, Type type) {
-            var properties = GetInjectableProperties(target, type);
-            foreach (var property in properties) {
-                InjectProperty(target, property);
+        private void InjectProperties(object target) {
+            var properties = target.GetSettablePropertiesWithAttribute<InjectAttribute>(Flags);
+
+            foreach (var (propertyInfo, injectAttribute) in properties) {
+                if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && propertyInfo.GetMemberValueOrNull(target) != null)
+                    continue;
+                
+                InjectProperty(target, propertyInfo, injectAttribute);
             }
         }
 
-        private void InjectProperty(object target, PropertyInfo property) {
-            if (property.CanWrite == false || property.GetSetMethod(true) == null)
-                throw new System.Exception($"Cannot inject into readonly property {property.Name}");
-                
-            var injectAttribute = FindInjectAttribute(property);
-            
-            if (injectAttribute == null)
-                throw new Exception($"Cannot find attribute on field marked for injection {property.Name}");
-            
+        private void InjectProperty(object target, PropertyInfo property, InjectAttribute injectAttribute) {
             Type intendedType = injectAttribute.ServiceType ?? property.PropertyType;
             
             if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
-                ServiceLocator.LocateServiceAsync(intendedType, service => {
+                _serviceContainer.LocateServiceAsync(intendedType, service => {
                     property.SetValue(target, service);
                 });
-            } else if (ServiceLocator.TryLocateService(intendedType, out ILocatableService service)) {
+            } else if (_serviceContainer.TryLocateService(intendedType, out ILocatableService service)) {
                 property.SetValue(target, service);
             } else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
                 throw new System.Exception($"Missing dependency for {property.Name}");
             }
         }
 
-        private void InjectMethods(object target, Type type) {
-            var methods = type.GetMethods(Flags);
-            foreach (var method in methods) {
-                if (IsMethodPending(method, target))
-                    continue;
-                
-                var injectAttribute = FindInjectAttribute(method);
-                
-                if (injectAttribute == null)
+        private void InjectMethods(object target) {
+            var methodPair = target.GetMethodsWithAttribute<InjectAttribute>(Flags);
+
+            foreach (var (method, injectAttribute) in methodPair) {
+                if (IsMethodAlreadyPending(method, target))
                     continue;
                 
                 var requiredParams = method.GetParameters()
@@ -103,7 +92,7 @@ namespace DGP.ServiceLocator.Injectable
                     .ToArray();
                 
                 object[] resolvedInstances = requiredParams
-                    .Select(paramType => ServiceLocator.TryLocateService(paramType, out var service) ? service : null)
+                    .Select(paramType => _serviceContainer.TryLocateService(paramType, out var service) ? service : null)
                     .ToArray<object>();
 
                 if (resolvedInstances.All(instance => instance != null)) {
@@ -111,12 +100,12 @@ namespace DGP.ServiceLocator.Injectable
                 } else if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
                     for (int i = 0; i < requiredParams.Length; i++) {
                         if (resolvedInstances[i] == null && !_pendingTypes.Contains(requiredParams[i])) {
-                            ServiceLocator.LocateServiceAsync(requiredParams[i], HandleServiceLocated);
+                            _serviceContainer.LocateServiceAsync(requiredParams[i], HandleServiceLocated);
                             _pendingTypes.Add(requiredParams[i]);
                         }
                     }
                     
-                    if (!IsMethodPending(method, target))
+                    if (!IsMethodAlreadyPending(method, target))
                         _pendingMethods.Add(new PendingMethod { Method = method, Target = target });
                 } else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
                     throw new System.Exception($"Missing dependency for {method.Name}");
@@ -124,85 +113,28 @@ namespace DGP.ServiceLocator.Injectable
             }
         }
         
-        #region Member Location
-        private InjectAttribute FindInjectAttribute(MemberInfo member) {
-            var attributes = member.GetCustomAttributes(typeof(InjectAttribute), true);
-            if (attributes.Length == 0) return null;
+        public T CreateAndInject<T>(bool allowUnmarkedConstructors=true) where T : class {
+            var constructorFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
             
-            return (InjectAttribute)attributes[0];
-        }
-        
-        private FieldInfo[] GetInjectableFields(object target, Type type) {
-            var fields = type.GetFields(Flags);
+            ConstructorInfo[] constructors = null;
             
-            foreach (var field in fields) {
-                if (field.IsInitOnly)
-                    throw new Exception($"Cannot inject into readonly field {field.Name}");
-            }
+            var markedConstructors = typeof(T).GetConstructorsWithAttribute<InjectAttribute>(constructorFlags);
             
-            return GetInjectableMembersOfType(target, fields);
-        }
-        
-        private PropertyInfo[] GetInjectableProperties(object target, Type type) {
-            var properties = type.GetProperties(Flags);
-
-            foreach (var property in properties) {
-                if (property.CanWrite == false || property.GetSetMethod(true) == null)
-                    throw new Exception($"Cannot inject into readonly property {property.Name}");
-            }
-
-            return GetInjectableMembersOfType(target, properties);
-        }
-        
-        private MethodInfo[] GetInjectableMethods(object target, Type type) {
-            var methods = type.GetMethods(Flags);
-            return GetInjectableMembersOfType(target, methods);
-        }
-
-        private T[] GetInjectableMembersOfType<T>(object target, T[] members) where T : MemberInfo {
-            List<T> injectableMembers = new List<T>(members.Length);
-
-            foreach (T member in members) {
-                var injectAttribute = FindInjectAttribute(member);
-                if (injectAttribute == null) continue;
-                
-                if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && member.GetMemberValue(target) != null)
-                    continue;
-                
-                injectableMembers.Add(member);
-            }
-            
-            return injectableMembers.ToArray();
-        }
-        #endregion
-
-
-
-        public T CreateAndInject<T>() where T : class {
-            var constructors = typeof(T).GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (markedConstructors.Length > 0)
+                constructors = markedConstructors.Select(constructor => constructor.constructorInfo).ToArray();
+            else if (allowUnmarkedConstructors)
+                constructors = typeof(T).GetConstructors(constructorFlags);
             
             if (constructors.Length == 0)
-                throw new System.Exception($"No constructors found for {typeof(T).Name}");
+                throw new System.Exception("Cannot find any valid constructors for type " + typeof(T).Name);
             
-            //find a constructor we can satisfy
             foreach (var constructor in constructors) {
-                // see if the constructor is marked as Inject
-                var attributes = constructor.GetCustomAttributes(typeof(InjectAttribute), true);
-                if (attributes.Length == 0) continue;
-                
-                var injectAttribute = (InjectAttribute)attributes[0];
-                
-                if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous))
-                    throw new System.Exception("Cannot use asynchronous injection on constructors");
-                
                 var parameters = constructor.GetParameters();
                 object[] resolvedInstances = parameters
-                    .Select(parameter => ServiceLocator.TryLocateService(parameter.ParameterType, out var service) ? service : null)
+                    .Select(parameter => _serviceContainer.TryLocateService(parameter.ParameterType, out var service) ? service : null)
                     .ToArray();
-                
-                if (injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
-                    return (T)constructor.Invoke(resolvedInstances);
-                } else if (resolvedInstances.All(instance => instance != null)) {
+
+                if (resolvedInstances.All(instance => instance != null)) {
                     return (T)constructor.Invoke(resolvedInstances);
                 }
             }
@@ -210,7 +142,7 @@ namespace DGP.ServiceLocator.Injectable
             return null;
         }
         
-        private bool IsMethodPending(MethodInfo method, object target) {
+        private bool IsMethodAlreadyPending(MethodInfo method, object target) {
             foreach (var pendingMethod in _pendingMethods) {
                 if (pendingMethod.Method == method && pendingMethod.Target == target)
                     return true;
@@ -228,7 +160,7 @@ namespace DGP.ServiceLocator.Injectable
                     .ToArray();
                 
                 object[] resolvedInstances = requiredParams
-                    .Select(paramType => ServiceLocator.TryLocateService(paramType, out var service) ? service : null)
+                    .Select(paramType => _serviceContainer.TryLocateService(paramType, out var service) ? service : null)
                     .ToArray();
                 
                 if (resolvedInstances.All(instance => instance != null)) {

@@ -1,4 +1,9 @@
 # Changelog
+
+## [1.5.0] - 2024-10-19
+### Changes
+- Extensive code refactoring to reduce complexity
+
 ## [1.4.3] - 2024-10-18
 ### Added
 - Ability to specify a different type for injection

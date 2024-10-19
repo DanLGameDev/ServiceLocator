@@ -193,6 +193,9 @@ namespace DGP.ServiceLocator
         public void ClearServices() {
             RegisteredServices.Clear();
             PendingServiceQueries.Clear();
+            
+            if (Injector != null)
+                Injector.ClearInjectors();
         }
     }
 }

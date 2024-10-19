@@ -1,3 +1,4 @@
+using DGP.ServiceLocator.Extensions;
 using DGP.ServiceLocator.Injectable;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
@@ -134,6 +135,28 @@ namespace DGP.ServiceLocator.Editor.Tests
         private class MockedInterfaceSubscriber
         {
             [Inject(serviceType:typeof(InterfacedServiceA))] public IMockService MyService;
+        }
+        
+        private class MockUnmarkedSubscriber
+        {
+            public MyMockService MyService;
+            
+            public MockUnmarkedSubscriber(MyMockService myService) {
+                MyService = myService;
+            }
+        }
+
+        [Test]
+        public void TestUnmarkedConstructAndInject() {
+            ServiceLocator.ClearServices();
+            
+            MyMockService service = new();
+            ServiceLocator.RegisterService(service);
+            
+            MockUnmarkedSubscriber subscriber = ServiceLocator.Injector.CreateAndInject<MockUnmarkedSubscriber>();
+            
+            Assert.IsNotNull(subscriber);
+            Assert.AreSame(service, subscriber.MyService);
         }
 
         [Test]
