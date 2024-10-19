@@ -3,7 +3,7 @@ using NUnit.Framework;
 
 namespace DGP.ServiceLocator.Editor.Tests
 {
-    public class ServiceLocatorTests
+    public class ServiceContainerTests
     {
         private class MyMockService : ILocatableService
         {
@@ -11,83 +11,82 @@ namespace DGP.ServiceLocator.Editor.Tests
     
         [Test]
         public void TestSynchronousLocating() {
+            var container = new ServiceContainer();
             var myService = new MyMockService();
             
             Assert.Throws<InvalidOperationException>(() => ServiceLocator.GetService<MyMockService>());
             
-            ServiceLocator.RegisterService(myService);
+            container.RegisterService(myService);
         
-            var locatedService = ServiceLocator.GetService<MyMockService>();
+            var locatedService = container.GetService<MyMockService>();
         
             Assert.AreSame(myService, locatedService);
-            ServiceLocator.ClearServices();
         }
 
         [Test]
         public void TestClearServices() {
-            ServiceLocator.ClearServices();
+            var container = new ServiceContainer();
             
             var myService = new MyMockService();
-            ServiceLocator.RegisterService(myService);
-            ServiceLocator.ClearServices();
+            container.RegisterService(myService);
+            container.ClearServices();
         
-            if (ServiceLocator.TryLocateService<MyMockService>(out var locatedService)) {
+            if (container.TryLocateService<MyMockService>(out var locatedService)) {
                 Assert.Fail("Service should not be located");
             }
         }
 
         [Test]
         public void TestAsynchronousLocating() {
-            ServiceLocator.ClearServices();
+            var container = new ServiceContainer();
             
             var myService = new MyMockService();
         
             int callbackCount = 0;
         
-            ServiceLocator.LocateServiceAsync<MyMockService>((service) => {
+            container.LocateServiceAsync<MyMockService>((service) => {
                 Assert.AreSame(myService, service);
                 callbackCount++;
             });
         
-            ServiceLocator.RegisterService(myService);
+            container.RegisterService(myService);
         
             Assert.AreEqual(1, callbackCount);
         }
 
         [Test]
         public void TestTryLocating() {
-            ServiceLocator.ClearServices();
+            var container = new ServiceContainer();
             
             var myService = new MyMockService();
         
-            if (ServiceLocator.TryLocateService<MyMockService>(out var locatedService)) {
+            if (container.TryLocateService<MyMockService>(out var locatedService)) {
                 Assert.Fail("Service should not be located");
             }
         
-            ServiceLocator.RegisterService(myService);
+            container.RegisterService(myService);
         
-            if (!ServiceLocator.TryLocateService<MyMockService>(out locatedService)) {
+            if (!container.TryLocateService<MyMockService>(out locatedService)) {
                 Assert.Fail("Service should be located");
             }
         }
 
         [Test]
         public void TestDeregister() {
-            ServiceLocator.ClearServices();
+            var container = new ServiceContainer();
             
             var myService = new MyMockService();
-            ServiceLocator.RegisterService(myService);
+            container.RegisterService(myService);
         
-            if (!ServiceLocator.TryLocateService<MyMockService>(out var locatedService)) {
+            if (!container.TryLocateService<MyMockService>(out var locatedService)) {
                 Assert.Fail("Service should be located");
             }
         
-            ServiceLocator.DeregisterService<MyMockService>();
+            container.DeregisterService<MyMockService>();
         
-            if (ServiceLocator.TryLocateService<MyMockService>(out locatedService)) {
+            if (container.TryLocateService<MyMockService>(out locatedService)) {
                 Assert.Fail("Service should not be located");
             }
         }
-
     }
 }

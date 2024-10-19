@@ -113,6 +113,11 @@ namespace DGP.ServiceLocator.Injectable
             }
         }
         
+        public bool TryCreateAndInject<T>(out T instance, bool allowUnmarkedConstructors=true) where T : class {
+            instance = CreateAndInject<T>(allowUnmarkedConstructors);
+            return instance != null;
+        }
+        
         public T CreateAndInject<T>(bool allowUnmarkedConstructors=true) where T : class {
             var constructorFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
             
