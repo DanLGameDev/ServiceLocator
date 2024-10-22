@@ -6,25 +6,30 @@ namespace DGP.ServiceLocator.Editor.Tests
 {
     public class ObjectInjectionTests
     {
+        private class MockService { }
 
         private class OriginClass
         {
-            [Provide] public List<string> MyList = new List<string>();
+            [Provide] public readonly MockService Service = new();
+            public SubscriberClass CreateSubscriber() => this.CreateWithLocalServices<SubscriberClass>();
         }
 
         private class SubscriberClass
         {
-            [Inject] public List<string> MyList;
+            public readonly MockService Service;
+            
+            public SubscriberClass(MockService service) {
+                Service = service;
+            }
         }
         
         [Test]
-        public void IsThiSStupid() {
+        public void CreateWithLocalTest() {
             var origin = new OriginClass();
-            var subscriber = new SubscriberClass();
+            var subscriber = origin.CreateSubscriber();
             
-            origin.InjectLocalServices(subscriber);
-            
-            Assert.AreSame(origin.MyList, subscriber.MyList);
+            Assert.AreSame(origin.Service, subscriber.Service);
         }
+        
     }
 }

@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Reflection;
 using DGP.ServiceLocator.Extensions;
 
@@ -10,6 +11,11 @@ namespace DGP.ServiceLocator.Injectable
         public static T InjectLocalServices<T>(this object source, T target)
         {
             return InjectFromSource(source, target);
+        }
+        
+        public static T CreateWithLocalServices<T>(this object source) where T : class
+        {
+            return ConstructWithLocalServices<T>(source);
         }
         
         /// <summary>
@@ -27,6 +33,38 @@ namespace DGP.ServiceLocator.Injectable
             InjectFieldsToTarget(source, target, sourceFields);
 
             return target;
+        }
+        
+        private static T ConstructWithLocalServices<T>(object source) {
+            var sourceType = source.GetType();
+            var sourceFields = source.GetFieldsWithAttribute<ProvideAttribute>(Flags);
+            var sourceProperties = source.GetPropertiesWithAttribute<ProvideAttribute>(Flags);
+
+            var constructors = typeof(T).GetConstructors(Flags);
+            foreach (var constructor in constructors) {
+                var constructorParameters = constructor.GetParameters();
+                
+                var parameterTypes = constructorParameters.Select(parameter => parameter.ParameterType).ToArray();
+                var resolvedTypes = new object[parameterTypes.Length];
+                
+                for (int i = 0; i < parameterTypes.Length; i++) {
+                    var parameterType = parameterTypes[i];
+                    object resolvedParameterValue = source.GetType() == parameterType ? source : null;
+                    resolvedParameterValue ??= sourceFields.FirstOrDefault(field => field.fieldInfo.FieldType == parameterType).fieldInfo.GetValue(source);
+                    resolvedParameterValue ??= sourceProperties.FirstOrDefault(property => property.propertyInfo.PropertyType == parameterType).propertyInfo.GetValue(source);
+                    
+                    resolvedTypes[i] = resolvedParameterValue;
+                }
+                
+                if (resolvedTypes.Any(resolvedType => resolvedType == null)) continue;
+                
+                var target = (T) constructor.Invoke(resolvedTypes);
+                InjectPropertiesToTarget(source, target, sourceProperties);
+                InjectFieldsToTarget(source, target, sourceFields);
+                return target;
+            }
+            
+            return default;
         }
 
         private static void InjectPropertiesToTarget<T>(object source, T target, (PropertyInfo propertyInfo, ProvideAttribute provideAttribute)[] sourceProperties) {
