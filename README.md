@@ -47,7 +47,48 @@ This supports field, property, and method injection. Missing services will not t
 
 You can also allow for asynchronoous injection using the `Asynchronous` flag, in which case the dependency will be injected when available.
 
-- `[Inject] public MyMockService MyService;`
-- `[Inject(InjectorFlags.ExceptionIfMissing)] public MyMockService MyService;`
-- `[Inject(InjectorFlags.Asynchronous)] public MyMockService MyService;`
-- `[Inject] public void InjectServices(MyMockService myService, MyMockComplexService myComplexService) {}`
+### Property and Field Injection
+```c#
+// The receiver marks properties and fields with the [Inject] attribute
+private class MyMockRequiredSubscriber
+{
+    [Inject] public MyMockService MyServiceField;
+    [Inject] public MyMockService MyServiceProperty { get; set; }
+}
+
+// Create a container (or could use ServiceLocator static)
+ServiceContainer container = new();
+
+var service = new MyMockService();
+var subscriber = new MyMockRequiredSubscriber();
+
+// Register the service
+container.RegisterService(service);
+
+// Inject the service into the subscriber
+container.Injector.Inject(subscriber);
+
+// The property and field should now be set
+Assert.AreSame(service, subscriber.MyServiceProperty);
+Assert.AreSame(service, subscriber.MyServiceField);
+```
+
+### Method Injection
+```c#
+// The receiver marks methods with the [Inject] attribute
+private class MyMockMethodSubscriber
+{
+    public MyMockService MyService { get; private set; }
+    [Inject] public void InjectService(MyMockService myService) => MyService = myService;
+}
+        
+ServiceContainer container = new();
+
+var service = new MyMockService();
+var subscriber = new MyMockMethodSubscriber();
+
+container.RegisterService(service);
+container.Injector.Inject(subscriber);
+
+Assert.AreSame(service, subscriber.MyService);
+```

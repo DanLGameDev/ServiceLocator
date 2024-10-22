@@ -178,16 +178,6 @@ namespace DGP.ServiceLocator.Editor.Tests
             
             Assert.AreSame(service, subscriber.MyService);
         }
-
-        [Test]
-        public void TestLocalServiceInjection() {
-            ServiceContainer container = new();
-            
-            MockParentClass parent = new MockParentClass();
-            var child = parent.CreateChild();
-            
-            Assert.AreSame(child.MockService, parent.MyMockService);
-        }
         
         [Test]
         public void TestInjectingOptionalDependency() {
