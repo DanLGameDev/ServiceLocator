@@ -213,7 +213,7 @@ namespace DGP.ServiceLocator.Editor.Tests
             var service = new MyMockService();
             var subscriber = new MyMockRequiredSubscriber();
             
-            Assert.Throws<System.Exception>(() => ServiceLocator.Inject(subscriber));
+            Assert.Throws<System.Exception>(() => ServiceLocator.Injector.Inject(subscriber));
             
             container.RegisterService(service);
             container.Injector.Inject(subscriber);

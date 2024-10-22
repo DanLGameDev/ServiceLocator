@@ -8,7 +8,7 @@ namespace DGP.ServiceLocator.Injectable
             if (container != null)
                 container.Injector.Inject(target);
             else
-                ServiceLocator.Inject(target);
+                ServiceLocator.Injector.Inject(target);
         }
     }
 }

@@ -26,8 +26,6 @@ namespace DGP.ServiceLocator
                 ClearServices();
             }
         }
-        
-        public static void Inject(object target) => Injector.Inject(target);
 
         #region Registration
         /// <summary>
