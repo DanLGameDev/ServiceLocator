@@ -16,9 +16,11 @@ namespace DGP.ServiceLocator.Editor.Tests
 
         private class SubscriberClass
         {
+            public OriginClass Parent;
             public readonly MockService Service;
             
-            public SubscriberClass(MockService service) {
+            public SubscriberClass(OriginClass parent, MockService service) {
+                Parent = parent;
                 Service = service;
             }
         }
@@ -28,6 +30,7 @@ namespace DGP.ServiceLocator.Editor.Tests
             var origin = new OriginClass();
             var subscriber = origin.CreateSubscriber();
             
+            Assert.AreSame(origin, subscriber.Parent);
             Assert.AreSame(origin.Service, subscriber.Service);
         }
         
