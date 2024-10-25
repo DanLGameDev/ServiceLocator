@@ -5,7 +5,7 @@ namespace DGP.ServiceLocator
     public class ServiceQuery
     {
         public ServiceSearchMode SearchMode;
-        public ServiceAddress Address;
+        public Type SearchedType;
         public Action<ILocatableService> CallbackFn;
     }
 }

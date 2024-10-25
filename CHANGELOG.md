@@ -1,4 +1,7 @@
 # Changelog
+## [1.6.0] - 2024-10-25
+### Changes
+- Removed the 'context' concept and replaced it with tree based containers
 
 ## [1.5.2] - 2024-10-19
 ### Changes

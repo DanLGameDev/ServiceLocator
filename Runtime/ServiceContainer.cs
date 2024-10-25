@@ -6,7 +6,10 @@ namespace DGP.ServiceLocator
 {
     public class ServiceContainer
     {
-        public readonly Dictionary<ServiceAddress, ILocatableService> RegisteredServices = new();
+        public event Action OnServicesListChanged;
+        
+        public readonly ServiceContainer ParentContainer;
+        public readonly Dictionary<Type, ILocatableService> RegisteredServices = new();
         public readonly List<ServiceQuery> PendingServiceQueries = new();
 
         private readonly Lazy<ServiceInjector> _injector;
@@ -16,49 +19,64 @@ namespace DGP.ServiceLocator
             _injector = new Lazy<ServiceInjector>(() => new ServiceInjector(this));
         }
         
+        public ServiceContainer(ServiceContainer parentContainer) {
+            ParentContainer = parentContainer;
+            _injector = new Lazy<ServiceInjector>(() => new ServiceInjector(this));
+            
+            if (ParentContainer != null)
+                ParentContainer.OnServicesListChanged += HandleServiceTreeChanged;
+        }
+        
+        ~ServiceContainer() {
+            if (ParentContainer != null)
+                ParentContainer.OnServicesListChanged -= HandleServiceTreeChanged;
+        }
+
+        private void HandleServiceTreeChanged() => FlushPendingServiceQueries();
+        
         #region Registration
         /// <summary>
         /// Registers a service with the ServiceLocator
         /// </summary>
         /// <param name="service">The service to register, must implement ILocatableService</param>
-        /// <param name="context">An optional context for the service</param>
         /// <typeparam name="TLocatableService">The type of service, must implement ILocatableService</typeparam>
-        public void RegisterService<TLocatableService>(TLocatableService service, object context=null) where TLocatableService : class, ILocatableService {
-            RegisterService(typeof(TLocatableService), service, context);
+        public void RegisterService<TLocatableService>(TLocatableService service) where TLocatableService : class, ILocatableService {
+            RegisterService(typeof(TLocatableService), service);
         }
-
-        private void RegisterService(Type type, ILocatableService service, object context=null) {
-            ServiceAddress address = FindOrCreateServiceAddress(type, context);
-            RegisteredServices[address] = service;
+        
+        public void RegisterService(Type type, ILocatableService service) {
+            RegisteredServices[type] = service;
             
+            OnServicesListChanged?.Invoke();
             FlushPendingServiceQueries();
         }
 
         /// <summary>
         /// Deregisters a service from the ServiceLocator
         /// </summary>
-        /// <param name="context">The context the service uses</param>
         /// <typeparam name="TLocatableService">The type of service to deregister</typeparam>
-        public void DeregisterService<TLocatableService>(object context=null) where TLocatableService : class, ILocatableService {
-            DeregisterService(typeof(TLocatableService), context);
-        }
-
-        private void DeregisterService(Type type, object context=null) {
-            ServiceAddress address = FindOrCreateServiceAddress(type, context);
-            RegisteredServices.Remove(address);
+        public void DeregisterService<TLocatableService>() where TLocatableService : class, ILocatableService {
+            RegisteredServices.Remove(typeof(TLocatableService));
+            OnServicesListChanged?.Invoke();
         }
         
         /// <summary>
-        /// Deregisters all services associated with a context
+        /// De-registers a service from the ServiceLocator
         /// </summary>
-        /// <param name="context"></param>
-        public void DeregisterContext(object context) {
-            foreach (var address in RegisteredServices.Keys) {
-                if (Equals(address.Context, context)) {
-                    RegisteredServices.Remove(address);
-                }
-            }
+        /// <param name="type">The type to deregister</param>
+        /// <exception cref="ArgumentNullException">thrown if type is null</exception>
+        /// <exception cref="ArgumentException">thrown if type does not implement ILocatableService</exception>
+        public void DeregisterService(Type type) {
+            if (type == null)
+                throw new ArgumentNullException(nameof(type));
+            
+            if (!typeof(ILocatableService).IsAssignableFrom(type))
+                throw new ArgumentException("Type must implement ILocatableService", nameof(type));
+            
+            RegisteredServices.Remove(type);
+            OnServicesListChanged?.Invoke();
         }
+
         #endregion
         
         #region Locate
@@ -70,12 +88,12 @@ namespace DGP.ServiceLocator
         /// <param name="context">An optional context the service must exist in</param>
         /// <param name="searchMode">The search mode to use when locating services</param>
         /// <typeparam name="TLocatableService">The type of service</typeparam>
-        public void LocateServiceAsync<TLocatableService>(Action<TLocatableService> callback, object context=null, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst) where TLocatableService : class, ILocatableService {
-            LocateServiceAsync(typeof(TLocatableService), service => callback((TLocatableService)service), context, searchMode);
+        public void LocateServiceAsync<TLocatableService>(Action<TLocatableService> callback, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst) where TLocatableService : class, ILocatableService {
+            LocateServiceAsync(typeof(TLocatableService), service => callback((TLocatableService)service),  searchMode);
         }
         
         public void LocateServiceAsync(Type type, Action<ILocatableService> callback, object context=null, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst) {
-            var result = LocateServiceInternal(type, context, searchMode);
+            var result = LocateServiceInternal(type, searchMode);
 
             if (result != null) {
                 callback((ILocatableService)result);
@@ -84,7 +102,7 @@ namespace DGP.ServiceLocator
             
             PendingServiceQueries.Add(new ServiceQuery {
                 SearchMode = searchMode,
-                Address = new ServiceAddress(type, context),
+                SearchedType = type,
                 CallbackFn = callback
             });
         }
@@ -93,7 +111,7 @@ namespace DGP.ServiceLocator
             for (int index = PendingServiceQueries.Count - 1; index >= 0; index--) {
                 var query = PendingServiceQueries[index];
                 
-                var result = LocateServiceInternal(query.Address.Type, query.Address.Context, query.SearchMode);
+                var result = LocateServiceInternal(query.SearchedType, query.SearchMode);
 
                 if (result != null) {
                     query.CallbackFn((ILocatableService)result);
@@ -110,8 +128,8 @@ namespace DGP.ServiceLocator
         /// <typeparam name="TLocatableService">The type of service to locate</typeparam>
         /// <returns>Returns the service if located, throws an exception if the service is not registered</returns>
         /// <exception cref="InvalidOperationException">Thrown when the service is not found</exception>
-        public TLocatableService GetService<TLocatableService>(object context=null, ServiceSearchMode searchMode=ServiceSearchMode.GlobalFirst) where TLocatableService : class, ILocatableService {
-            var result = LocateServiceInternal(typeof(TLocatableService), context, searchMode);
+        public TLocatableService GetService<TLocatableService>(ServiceSearchMode searchMode=ServiceSearchMode.GlobalFirst) where TLocatableService : class, ILocatableService {
+            var result = LocateServiceInternal(typeof(TLocatableService), searchMode);
 
             if (result is TLocatableService service)
                 return service;
@@ -127,8 +145,8 @@ namespace DGP.ServiceLocator
         /// <param name="searchMode">The search mode to use when locating the service</param>
         /// <typeparam name="TLocatableService">The type of service to locate</typeparam>
         /// <returns></returns>
-        public bool TryLocateService<TLocatableService>(out TLocatableService service, object context=null, ServiceSearchMode searchMode=ServiceSearchMode.GlobalFirst) where TLocatableService : class, ILocatableService {
-            service = LocateServiceInternal(typeof(TLocatableService), context, searchMode) as TLocatableService;
+        public bool TryLocateService<TLocatableService>(out TLocatableService service, ServiceSearchMode searchMode=ServiceSearchMode.GlobalFirst) where TLocatableService : class, ILocatableService {
+            service = LocateServiceInternal(typeof(TLocatableService), searchMode) as TLocatableService;
             return service != null;
         }
         
@@ -140,36 +158,21 @@ namespace DGP.ServiceLocator
         /// <param name="context">The context the service must exist in</param>
         /// <param name="searchMode">The search mode to use when locating the service</param>
         /// <returns></returns>
-        public bool TryLocateService(Type type, out ILocatableService service, object context=null, ServiceSearchMode searchMode=ServiceSearchMode.GlobalFirst) {
-            service = LocateServiceInternal(type, context, searchMode) as ILocatableService;
+        public bool TryLocateService(Type type, out ILocatableService service, ServiceSearchMode searchMode=ServiceSearchMode.GlobalFirst) {
+            service = LocateServiceInternal(type, searchMode) as ILocatableService;
             return service != null;
         }
 
-        private object LocateServiceInternal(Type type, object context, ServiceSearchMode searchMode) {
-            Func<Type, object, object> locateService = (serviceType, context) => {
-                foreach (var entry in RegisteredServices) {
-                    var address = entry.Key;
-                    
-                    if (address.Type == serviceType && Equals(address.Context, context)) {
-                        return entry.Value;
-                    }
-                }
-                
-                return null;
-            };
-            
+        private object LocateServiceInternal(Type type, ServiceSearchMode searchMode) {
             switch (searchMode) {
-                case ServiceSearchMode.GlobalOnly:
-                    return locateService(type, null);
                 case ServiceSearchMode.LocalOnly:
-                    return locateService(type, context);
-                case ServiceSearchMode.GlobalFirst: {
-                    object service = locateService(type, null);
-                    return service ?? locateService(type, context);
-                }
+                    return RegisteredServices.GetValueOrDefault(type);
+                case ServiceSearchMode.GlobalFirst:
+                    return ParentContainer != null && ParentContainer.TryLocateService(type, out var service, searchMode) ? service :
+                           LocateServiceInternal(type, ServiceSearchMode.LocalOnly);
                 case ServiceSearchMode.LocalFirst: {
-                    object service = locateService(type, context);
-                    return service ?? locateService(type, null);
+                    return RegisteredServices.GetValueOrDefault(type) ??
+                           ParentContainer?.LocateServiceInternal(type, searchMode);
                 }
                 default:
                     return null;
@@ -177,16 +180,6 @@ namespace DGP.ServiceLocator
         }
         
         #endregion
-        
-        private ServiceAddress FindOrCreateServiceAddress(Type type, object context) {
-            foreach (var address in RegisteredServices.Keys) {
-                if ((address.Context == context) && (address.Type == type)) {
-                    return address;
-                }
-            }
-            
-            return new ServiceAddress(type, context);
-        }
         
         /// <summary>
         /// Clears all services and pending service queries

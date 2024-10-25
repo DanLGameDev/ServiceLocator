@@ -47,9 +47,8 @@ namespace DGP.ServiceLocator.Editor
             EditorGUI.indentLevel++;
             foreach (var service in ServiceLocator.Container.RegisteredServices)
             {
-                if (service.Value != null)
-                {
-                    EditorGUILayout.LabelField($"{service.Key.Type.Name} (Context: {service.Key.Context?.ToString() ?? "null"})");
+                if (service.Value != null) {
+                    EditorGUILayout.LabelField($"{service.Key.Name}");
                 }
             }
             EditorGUI.indentLevel--;
@@ -59,7 +58,7 @@ namespace DGP.ServiceLocator.Editor
             EditorGUI.indentLevel++;
             foreach (var query in ServiceLocator.Container.PendingServiceQueries)
             {
-                EditorGUILayout.LabelField($"{query.Address.Type.Name} - {query.SearchMode} (Context: {query.Address.Context?.ToString() ?? "null"})");
+                EditorGUILayout.LabelField($"{query.SearchedType.Name} - {query.SearchMode})");
             }
             EditorGUI.indentLevel--;
         }
