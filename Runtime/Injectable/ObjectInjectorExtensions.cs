@@ -38,7 +38,6 @@ namespace DGP.ServiceLocator.Injectable
 
         private static T ConstructWithLocalServices<T>(object source)
         {
-            var sourceType = source.GetType();
             var sourceFields = source.GetFieldsWithAttribute<ProvideAttribute>(Flags);
             var sourceProperties = source.GetPropertiesWithAttribute<ProvideAttribute>(Flags);
 
