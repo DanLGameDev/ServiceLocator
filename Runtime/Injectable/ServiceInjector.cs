@@ -104,8 +104,7 @@ namespace DGP.ServiceLocator.Injectable
 
                 if (resolvedInstances.All(instance => instance != null)) {
                     method.Invoke(target, resolvedInstances);
-                }
-                else if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
+                } else if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
                     for (int i = 0; i < requiredParams.Length; i++) {
                         if (resolvedInstances[i] == null && !_pendingTypes.Contains(requiredParams[i])) {
                             _serviceContainer.LocateServiceAsync(requiredParams[i], HandleServiceLocated);
@@ -115,9 +114,8 @@ namespace DGP.ServiceLocator.Injectable
 
                     if (!IsMethodAlreadyPending(method, target))
                         _pendingMethods.Add(new PendingMethod { Method = method, Target = target });
-                }
-                else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
-                    throw new System.Exception($"Missing dependency for {method.Name}");
+                } else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
+                    throw new Exception($"Missing one or more dependencies for {method.Name}");
                 }
             }
         }

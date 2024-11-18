@@ -10,7 +10,7 @@ namespace DGP.ServiceLocator
 
         public readonly ServiceContainer ParentContainer;
         public readonly Dictionary<Type, ILocatableService> RegisteredServices = new();
-        public readonly List<ServiceQuery> PendingServiceQueries = new();
+        public readonly List<ServiceQuery> PendingServiceQueries = new List<ServiceQuery>(capacity: 8);
 
         private readonly Lazy<ServiceInjector> _injector;
         public ServiceInjector Injector => _injector.Value;
@@ -33,6 +33,8 @@ namespace DGP.ServiceLocator
         {
             if (ParentContainer != null)
                 ParentContainer.OnServicesListChanged -= HandleServiceTreeChanged;
+            
+            GC.SuppressFinalize(this);
         }
 
         private void HandleServiceTreeChanged() => FlushPendingServiceQueries();
