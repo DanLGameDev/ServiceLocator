@@ -1,4 +1,9 @@
 # Changelog
+
+## [1.7.0] - 2024-11-17
+### Changes
+- Services no longer need to implement `ILocatableService`
+
 ## [1.6.0] - 2024-10-25
 ### Changes
 - Removed the 'context' concept and replaced it with tree based containers

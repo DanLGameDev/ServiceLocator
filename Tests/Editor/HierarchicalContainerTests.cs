@@ -4,7 +4,7 @@ namespace DGP.ServiceLocator.Editor.Tests
 {
     public class HierarchicalContainerTests
     {
-        private class TestService : ILocatableService
+        private class TestService
         {
         } 
         

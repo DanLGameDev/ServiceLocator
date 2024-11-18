@@ -5,7 +5,7 @@ namespace DGP.ServiceLocator.Editor.Tests
 {
     public class ServiceContainerTests
     {
-        private class MyMockService : ILocatableService
+        private class MyMockService
         {
         }
     

@@ -51,7 +51,7 @@ namespace DGP.ServiceLocator.Injectable
             if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
                 _serviceContainer.LocateServiceAsync(intendedType, service => { field.SetValue(target, service); });
             }
-            else if (_serviceContainer.TryLocateService(intendedType, out ILocatableService service)) {
+            else if (_serviceContainer.TryLocateService(intendedType, out object service)) {
                 field.SetValue(target, service);
             }
             else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
@@ -78,7 +78,7 @@ namespace DGP.ServiceLocator.Injectable
             if (injectAttribute.Flags.HasFlag(InjectorFlags.Asynchronous)) {
                 _serviceContainer.LocateServiceAsync(intendedType, service => { property.SetValue(target, service); });
             }
-            else if (_serviceContainer.TryLocateService(intendedType, out ILocatableService service)) {
+            else if (_serviceContainer.TryLocateService(intendedType, out object service)) {
                 property.SetValue(target, service);
             }
             else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {

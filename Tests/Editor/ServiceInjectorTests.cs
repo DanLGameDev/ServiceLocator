@@ -6,7 +6,7 @@ namespace DGP.ServiceLocator.Editor.Tests
 {
     public class ServiceInjectorTests
     {
-        private interface IAmMockService : ILocatableService
+        private interface IAmMockService
         {
             public void DoSomething();
         }
@@ -122,7 +122,7 @@ namespace DGP.ServiceLocator.Editor.Tests
             [Inject] public MyMockService MockService;
         }
 
-        private interface IMockService : ILocatableService { }
+        private interface IMockService { }
         private class InterfacedServiceA : IMockService { }
         
         private class MockedInterfaceSubscriber

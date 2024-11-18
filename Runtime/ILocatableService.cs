@@ -1,4 +1,4 @@
 namespace DGP.ServiceLocator
 {
-    public interface ILocatableService {}
+    //public interface ILocatableService {}
 }

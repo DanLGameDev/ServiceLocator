@@ -34,12 +34,12 @@ namespace DGP.ServiceLocator
         /// <param name="service">The service to register, must implement ILocatableService</param>
         /// <typeparam name="TLocatableService">The type of service, must implement ILocatableService</typeparam>
         public static void RegisterService<TLocatableService>(TLocatableService service)
-            where TLocatableService : class, ILocatableService
+            where TLocatableService : class
         {
             Instance.RegisterService(service);
         }
 
-        public static void RegisterService(Type type, ILocatableService service)
+        public static void RegisterService(Type type, object service)
         {
             Instance.RegisterService(type, service);
         }
@@ -48,7 +48,7 @@ namespace DGP.ServiceLocator
         /// Deregisters a service from the ServiceLocator
         /// </summary>
         /// <typeparam name="TLocatableService">The type of service to deregister</typeparam>
-        public static void DeregisterService<TLocatableService>() where TLocatableService : class, ILocatableService
+        public static void DeregisterService<TLocatableService>() where TLocatableService : class
         {
             Instance.DeregisterService<TLocatableService>();
         }
@@ -76,7 +76,7 @@ namespace DGP.ServiceLocator
         /// <param name="searchMode">The search mode to use when locating services</param>
         /// <typeparam name="TLocatableService">The type of service</typeparam>
         public static void LocateServiceAsync<TLocatableService>(Action<TLocatableService> callback, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst)
-            where TLocatableService : class, ILocatableService
+            where TLocatableService : class
         {
             Instance.LocateServiceAsync(callback, searchMode);
         }
@@ -88,7 +88,7 @@ namespace DGP.ServiceLocator
         /// <param name="type"></param>
         /// <param name="callback"></param>
         /// <param name="searchMode"></param>
-        public static void LocateServiceAsync(Type type, Action<ILocatableService> callback, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst)
+        public static void LocateServiceAsync(Type type, Action<object> callback, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst)
         {
             Instance.LocateServiceAsync(type, callback, searchMode);
         }
@@ -102,7 +102,7 @@ namespace DGP.ServiceLocator
         /// <exception cref="InvalidOperationException">Thrown when the service is not found</exception>
         public static TLocatableService GetService<TLocatableService>(
             ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst)
-            where TLocatableService : class, ILocatableService
+            where TLocatableService : class
         {
             return Instance.GetService<TLocatableService>(searchMode);
         }
@@ -116,7 +116,7 @@ namespace DGP.ServiceLocator
         /// <returns></returns>
         public static bool TryLocateService<TLocatableService>(out TLocatableService service,
             ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst)
-            where TLocatableService : class, ILocatableService
+            where TLocatableService : class
         {
             return Instance.TryLocateService(out service, searchMode);
         }
@@ -128,7 +128,7 @@ namespace DGP.ServiceLocator
         /// <param name="service">The service if found or null if not</param>
         /// <param name="searchMode">The search mode to use when locating the service</param>
         /// <returns></returns>
-        public static bool TryLocateService(Type type, out ILocatableService service,
+        public static bool TryLocateService(Type type, out object service,
             ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst)
         {
             return Instance.TryLocateService(type, out service, searchMode);

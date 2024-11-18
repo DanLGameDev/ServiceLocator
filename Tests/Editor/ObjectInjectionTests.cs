@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using DGP.ServiceLocator.Injectable;
 using NUnit.Framework;
 

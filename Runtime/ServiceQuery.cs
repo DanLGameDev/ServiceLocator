@@ -6,6 +6,6 @@ namespace DGP.ServiceLocator
     {
         public ServiceSearchMode SearchMode;
         public Type SearchedType;
-        public Action<ILocatableService> CallbackFn;
+        public Action<object> CallbackFn;
     }
 }
