@@ -1,10 +1,11 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using DGP.ServiceLocator.Injectable;
 
 namespace DGP.ServiceLocator
 {
-    public class ServiceContainer
+    public class ServiceContainer : IEnumerable<object>
     {
         public event Action OnServicesListChanged;
 
@@ -29,6 +30,21 @@ namespace DGP.ServiceLocator
                 ParentContainer.OnServicesListChanged += HandleServiceTreeChanged;
         }
 
+        #region IEnumerable
+        public IEnumerator<object> GetEnumerator()
+        {
+            foreach (var service in RegisteredServices.Values)
+                yield return service;
+
+            if (ParentContainer != null) {
+                foreach (var service in ParentContainer.RegisteredServices.Values)
+                    yield return service;
+            }
+        }
+        
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        #endregion
+
         ~ServiceContainer()
         {
             if (ParentContainer != null)
@@ -46,17 +62,20 @@ namespace DGP.ServiceLocator
         /// </summary>
         /// <param name="service">The service to register, must implement ILocatableService</param>
         /// <typeparam name="TLocatableService">The type of service, must implement ILocatableService</typeparam>
-        public void RegisterService<TLocatableService>(TLocatableService service) where TLocatableService : class
+        public TLocatableService RegisterService<TLocatableService>(TLocatableService service) where TLocatableService : class
         {
             RegisterService(typeof(TLocatableService), service);
+            return service;
         }
 
-        public void RegisterService(Type type, object service)
+        public object RegisterService(Type type, object service)
         {
             RegisteredServices[type] = service;
 
             OnServicesListChanged?.Invoke();
             FlushPendingServiceQueries();
+
+            return service;
         }
 
         /// <summary>

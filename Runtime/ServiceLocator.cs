@@ -33,15 +33,17 @@ namespace DGP.ServiceLocator
         /// </summary>
         /// <param name="service">The service to register, must implement ILocatableService</param>
         /// <typeparam name="TLocatableService">The type of service, must implement ILocatableService</typeparam>
-        public static void RegisterService<TLocatableService>(TLocatableService service)
+        public static TLocatableService RegisterService<TLocatableService>(TLocatableService service)
             where TLocatableService : class
         {
             Instance.RegisterService(service);
+            return service;
         }
 
-        public static void RegisterService(Type type, object service)
+        public static object RegisterService(Type type, object service)
         {
             Instance.RegisterService(type, service);
+            return service;
         }
 
         /// <summary>

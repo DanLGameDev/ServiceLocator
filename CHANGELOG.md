@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.8.0] - 2025-05-23
+### Changes
+- Registration now returns the registered service
+- Service locator is now IEnumerable<object>
+
 ## [1.7.0] - 2024-11-17
 ### Changes
 - Services no longer need to implement `ILocatableService`
