@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using DGP.ServiceLocator.Injectable;
 using UnityEditor;
 
@@ -33,18 +34,8 @@ namespace DGP.ServiceLocator
         /// </summary>
         /// <param name="service">The service to register, must implement ILocatableService</param>
         /// <typeparam name="TLocatableService">The type of service, must implement ILocatableService</typeparam>
-        public static TLocatableService RegisterService<TLocatableService>(TLocatableService service)
-            where TLocatableService : class
-        {
-            Instance.RegisterService(service);
-            return service;
-        }
-
-        public static object RegisterService(Type type, object service)
-        {
-            Instance.RegisterService(type, service);
-            return service;
-        }
+        public static TLocatableService RegisterService<TLocatableService>(TLocatableService service) where TLocatableService : class => Instance.RegisterService(service);
+        public static object RegisterService(Type type, object service) => Instance.RegisterService(type, service);
 
         /// <summary>
         /// Deregisters a service from the ServiceLocator
