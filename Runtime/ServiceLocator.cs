@@ -7,6 +7,8 @@ namespace DGP.ServiceLocator
 {
     public static class ServiceLocator
     {
+        public static event Action BeforeServicesCleared;
+        
         private static readonly Lazy<ServiceContainer> instance = new(() => new ServiceContainer());
         public static ServiceContainer Instance => instance.Value;
         public static ServiceContainer Container => Instance;
@@ -134,6 +136,10 @@ namespace DGP.ServiceLocator
         /// </summary>
         public static void ClearServices()
         {
+            if (Instance.RegisteredServices.Count==0)
+                return;
+            
+            BeforeServicesCleared?.Invoke();
             Instance.ClearServices();
         }
     }

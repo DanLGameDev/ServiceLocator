@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.4] - 2025-08-02
+### Changes
+- Event now fires before services are cleared
+
 ## [1.8.0] - 2025-05-23
 ### Changes
 - Registration now returns the registered service
