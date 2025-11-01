@@ -33,13 +33,6 @@ namespace DGP.ServiceLocator.Editor.Tests
         {
             [Inject(flags: InjectorFlags.Optional)] public MyMockService MyServiceField;
             [Inject(flags: InjectorFlags.Optional)] public MyMockService MyServiceProperty { get; set; }
-            
-        }
-        
-        private class MyMockAsynchronousSubscriber
-        {
-            [Inject(flags: InjectorFlags.Asynchronous)] public MyMockService MyService;
-            [Inject(flags: InjectorFlags.Asynchronous)] public MyMockService MyServiceProperty { get; set; }
         }
         
         private class MyMockMethodSubscriber
@@ -53,7 +46,8 @@ namespace DGP.ServiceLocator.Editor.Tests
             public MyMockService MyService { get; private set; }
             public MyOtherMockService MyOtherService { get; private set; }
             
-            [Inject(flags: InjectorFlags.Optional)] public void InjectServices(MyMockService myService, MyOtherMockService myOtherService) {
+            [Inject(flags: InjectorFlags.Optional)] public void InjectServices(MyMockService myService, MyOtherMockService myOtherService)
+            {
                 MyService = myService;
                 MyOtherService = myOtherService;
             }
@@ -64,18 +58,8 @@ namespace DGP.ServiceLocator.Editor.Tests
             public MyMockService MyService { get; private set; }
             public MyOtherMockService MyOtherService { get; private set; }
             
-            [Inject] public void InjectServices(MyMockService myService, MyOtherMockService myOtherService) {
-                MyService = myService;
-                MyOtherService = myOtherService;
-            }
-        }
-        
-        private class MyMockComplexAsyncMethodSubscriber
-        {
-            public MyMockService MyService { get; private set; }
-            public MyOtherMockService MyOtherService { get; private set; }
-            
-            [Inject(flags: InjectorFlags.Asynchronous)] public void InjectServices(MyMockService myService, MyOtherMockService myOtherService) {
+            [Inject] public void InjectServices(MyMockService myService, MyOtherMockService myOtherService)
+            {
                 MyService = myService;
                 MyOtherService = myOtherService;
             }
@@ -100,7 +84,8 @@ namespace DGP.ServiceLocator.Editor.Tests
         {
             public readonly MyMockService MyService;
             
-            [Inject] public MockConstructableSubscriber(MyMockService myService) {
+            [Inject] public MockConstructableSubscriber(MyMockService myService)
+            {
                 MyService = myService;
             }
         }
@@ -134,15 +119,15 @@ namespace DGP.ServiceLocator.Editor.Tests
         {
             public MyMockService MyService;
             
-            public MockUnmarkedSubscriber(MyMockService myService) {
+            public MockUnmarkedSubscriber(MyMockService myService)
+            {
                 MyService = myService;
             }
         }
 
-        // This test passes if the CreateAndInject method is able to create an instance of a class with an unmarked
-        // constructor and inject the required dependencies.
         [Test]
-        public void TestUnmarkedConstructAndInject() {
+        public void TestUnmarkedConstructAndInject()
+        {
             ServiceContainer container = new();
             
             MyMockService service = new();
@@ -162,7 +147,8 @@ namespace DGP.ServiceLocator.Editor.Tests
         }
 
         [Test]
-        public void TestInjectionTypeSpecification() {
+        public void TestInjectionTypeSpecification()
+        {
             ServiceContainer container = new();
             
             InterfacedServiceA service = new();
@@ -180,7 +166,8 @@ namespace DGP.ServiceLocator.Editor.Tests
         }
         
         [Test]
-        public void TestInjectingOptionalDependency() {
+        public void TestInjectingOptionalDependency()
+        {
             ServiceContainer container = new();
             
             var service = new MyMockService();
@@ -197,13 +184,14 @@ namespace DGP.ServiceLocator.Editor.Tests
         }
         
         [Test]
-        public void TestInjectingRequiredDependency() {
+        public void TestInjectingRequiredDependency()
+        {
             ServiceContainer container = new();
             
             var service = new MyMockService();
             var subscriber = new MyMockRequiredSubscriber();
             
-            Assert.Throws<System.Exception>(() => ServiceLocator.Injector.Inject(subscriber));
+            Assert.Throws<Exception>(() => ServiceLocator.Injector.Inject(subscriber));
             
             container.RegisterService(service);
             container.Injector.Inject(subscriber);
@@ -212,22 +200,8 @@ namespace DGP.ServiceLocator.Editor.Tests
         }
         
         [Test]
-        public void TestInjectingAsynchronousDependency() {
-            ServiceContainer container = new();
-                
-            var service = new MyMockService();
-            var subscriber = new MyMockAsynchronousSubscriber();
-            
-            container.Injector.Inject(subscriber);
-            Assert.IsNull(subscriber.MyService);
-            
-            container.RegisterService(service);
-            
-            Assert.AreSame(service, subscriber.MyService);
-        }
-        
-        [Test]
-        public void TestInjectingMethodDependency() {
+        public void TestInjectingMethodDependency()
+        {
             ServiceContainer container = new();
             
             var service = new MyMockService();
@@ -240,12 +214,12 @@ namespace DGP.ServiceLocator.Editor.Tests
         }
         
         [Test]
-        public void TestComplexMethodInjection() {
+        public void TestComplexMethodInjection()
+        {
             ServiceContainer container = new();
             
             var optionalSubscriber = new MyMockComplexOptionalMethodSubscriber();
             var requiredSubscriber = new MyMockComplexRequiredMethodSubscriber();
-            var asyncSubscriber = new MyMockComplexAsyncMethodSubscriber();
             
             var service = new MyMockService();
             var complexService = new MyOtherMockService();
@@ -254,9 +228,6 @@ namespace DGP.ServiceLocator.Editor.Tests
             Assert.IsNull(optionalSubscriber.MyService);
             
             Assert.Throws<Exception>(() => container.Injector.Inject(requiredSubscriber));
-            
-            container.Injector.Inject(asyncSubscriber);
-            Assert.IsNull(asyncSubscriber.MyService);
             
             container.RegisterService(service);
             container.RegisterService(complexService);
@@ -268,37 +239,11 @@ namespace DGP.ServiceLocator.Editor.Tests
             container.Injector.Inject(requiredSubscriber);
             Assert.AreSame(service, requiredSubscriber.MyService);
             Assert.AreSame(complexService, requiredSubscriber.MyOtherService);
-            
-            Assert.AreSame(service, asyncSubscriber.MyService);
-            Assert.AreSame(complexService, asyncSubscriber.MyOtherService);
         }
         
         [Test]
-        public void TestAsyncComplexMethodInjection() {
-            ServiceContainer container = new();
-            
-            var service = new MyMockService();
-            var complexService = new MyOtherMockService();
-            var subscriber = new MyMockComplexAsyncMethodSubscriber();
-            
-            container.Injector.Inject(subscriber);
-            
-            Assert.IsNull(subscriber.MyService);
-            Assert.IsNull(subscriber.MyOtherService);
-            
-            container.RegisterService(service);
-            
-            Assert.IsNull(subscriber.MyService);
-            Assert.IsNull(subscriber.MyOtherService);
-            
-            container.RegisterService(complexService);
-            
-            Assert.AreSame(service, subscriber.MyService);
-            Assert.AreSame(complexService, subscriber.MyOtherService);
-        }
-        
-        [Test]
-        public void TestExceptionComplexMethodInjection() {
+        public void TestExceptionComplexMethodInjection()
+        {
             ServiceContainer container = new();
             
             var subscriber = new MyMockComplexRequiredMethodSubscriber();
@@ -307,7 +252,7 @@ namespace DGP.ServiceLocator.Editor.Tests
             
             container.RegisterService(service);
             
-            Assert.Throws<System.Exception>(() => container.Injector.Inject(subscriber));
+            Assert.Throws<Exception>(() => container.Injector.Inject(subscriber));
             
             container.RegisterService(complexService);
             container.Injector.Inject(subscriber);
@@ -317,7 +262,8 @@ namespace DGP.ServiceLocator.Editor.Tests
         }
 
         [Test]
-        public void TestInterfaceInjections() {
+        public void TestInterfaceInjections()
+        {
             ServiceContainer container = new();
             
             MockInterfacedService service = new MockInterfacedService();
@@ -331,7 +277,8 @@ namespace DGP.ServiceLocator.Editor.Tests
         }
         
         [Test]
-        public void TestIrreplacableInjection() {
+        public void TestIrreplacableInjection()
+        {
             ServiceContainer container = new();
             
             MyMockService service = new MyMockService();
@@ -357,7 +304,8 @@ namespace DGP.ServiceLocator.Editor.Tests
         }
         
         [Test]
-        public void TestConstructableInjection() {
+        public void TestConstructableInjection()
+        {
             ServiceContainer container = new();
             
             MyMockService service = new MyMockService();
@@ -373,6 +321,5 @@ namespace DGP.ServiceLocator.Editor.Tests
             Assert.IsNotNull(subscriber);
             Assert.AreSame(service, subscriber.MyService);
         }
-
     }
 }

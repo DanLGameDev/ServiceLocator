@@ -4,7 +4,7 @@ using DGP.ServiceLocator.Injectable;
 
 namespace DGP.ServiceLocator
 {
-    public class ServiceContainer
+    public class ServiceContainer : IServiceProvider
     {
         public event Action OnServicesListChanged;
 
@@ -133,6 +133,11 @@ namespace DGP.ServiceLocator
 
             throw new InvalidOperationException($"Service of type {typeof(TLocatableService).Name} not found");
         }
+        
+        public bool TryGetService(Type serviceType, out object service)
+        {
+            return TryLocateService(serviceType, out service, ServiceSearchMode.LocalFirst);
+        }
 
         /// <summary>
         /// Tries to locate a service and returns true if the service is found.
@@ -141,12 +146,13 @@ namespace DGP.ServiceLocator
         /// <param name="searchMode">The search mode to use when locating the service</param>
         /// <typeparam name="TLocatableService">The type of service to locate</typeparam>
         /// <returns></returns>
-        public bool TryLocateService<TLocatableService>(out TLocatableService service, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst) where TLocatableService : class
+        public bool TryLocateService<TLocatableService>(out TLocatableService service, ServiceSearchMode searchMode = ServiceSearchMode.LocalFirst) where TLocatableService : class
         {
             service = LocateServiceInternal(typeof(TLocatableService), searchMode) as TLocatableService;
             return service != null;
         }
-
+        
+        
         /// <summary>
         /// Tries to locate a service and returns true if the service is found.
         /// </summary>
@@ -154,7 +160,7 @@ namespace DGP.ServiceLocator
         /// <param name="service">The service if found or null if not</param>
         /// <param name="searchMode">The search mode to use when locating the service</param>
         /// <returns></returns>
-        public bool TryLocateService(Type type, out object service, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst)
+        public bool TryLocateService(Type type, out object service, ServiceSearchMode searchMode = ServiceSearchMode.LocalFirst)
         {
             service = LocateServiceInternal(type, searchMode);
             return service != null;

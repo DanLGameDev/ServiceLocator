@@ -10,9 +10,6 @@ namespace DGP.ServiceLocator.Injectable
         // Will not throw an exception if the dependency is missing
         Optional = 1 << 1,
         
-        // If the dependency is not available, the injection will be performed when the dependency is available
-        Asynchronous = 1 << 2,
-        
         // Will not replace the existing value if it is already set
         DontReplace = 1 << 3,
     }
