@@ -17,10 +17,7 @@ namespace DGP.ServiceLocator.Extensions
 
         public static T GetAttributeOrNull<T>(this MemberInfo member) where T : Attribute
         {
-            var attributes = member.GetCustomAttributes(typeof(T), true);
-            if (attributes.Length == 0) return null;
-
-            return attributes[0] as T;
+            return member.GetCustomAttribute<T>();
         }
     }
 }

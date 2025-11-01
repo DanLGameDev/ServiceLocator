@@ -10,7 +10,7 @@ namespace DGP.ServiceLocator.Extensions
         public static (PropertyInfo propertyInfo, TAttributeType attribute)[] GetSettablePropertiesWithAttribute<TAttributeType>(this object target, BindingFlags flags) where TAttributeType : Attribute
         {
             var properties = GetPropertiesWithAttribute<TAttributeType>(target, flags);
-            return properties.Where(property => property.propertyInfo.CanWrite && property.propertyInfo.SetMethod != null).ToArray();
+            return properties.Where(property => property.propertyInfo.CanWrite).ToArray();
         }
 
         public static (FieldInfo fieldInfo, TAttributeType attribute)[] GetSettableFieldsWithAttribute<TAttributeType>(this object target, BindingFlags flags) where TAttributeType : Attribute
