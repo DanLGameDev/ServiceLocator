@@ -9,11 +9,11 @@ namespace DGP.ServiceLocator.Injectable
     {
         private const BindingFlags Flags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
 
-        private readonly ServiceContainer _serviceContainer;
+        private readonly IServiceProvider _serviceProvider;
 
-        public ServiceInjector(ServiceContainer serviceContainer)
+        public ServiceInjector(IServiceProvider serviceProvider)
         {
-            _serviceContainer = serviceContainer;
+            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         }
 
         public void Inject(object target)
@@ -40,7 +40,7 @@ namespace DGP.ServiceLocator.Injectable
         {
             Type intendedType = injectAttribute.ServiceType ?? field.FieldType;
 
-            if (_serviceContainer.TryLocateService(intendedType, out object service))
+            if (_serviceProvider.TryGetService(intendedType, out object service))
             {
                 field.SetValue(target, service);
             }
@@ -67,7 +67,7 @@ namespace DGP.ServiceLocator.Injectable
         {
             Type intendedType = injectAttribute.ServiceType ?? property.PropertyType;
 
-            if (_serviceContainer.TryLocateService(intendedType, out object service))
+            if (_serviceProvider.TryGetService(intendedType, out object service))
             {
                 property.SetValue(target, service);
             }
@@ -88,7 +88,7 @@ namespace DGP.ServiceLocator.Injectable
                     .ToArray();
 
                 object[] resolvedInstances = requiredParams
-                    .Select(paramType => _serviceContainer.TryLocateService(paramType, out var service) ? service : null)
+                    .Select(paramType => _serviceProvider.TryGetService(paramType, out var service) ? service : null)
                     .ToArray();
 
                 if (resolvedInstances.All(instance => instance != null))
@@ -128,7 +128,7 @@ namespace DGP.ServiceLocator.Injectable
             {
                 var parameters = constructor.GetParameters();
                 object[] resolvedInstances = parameters
-                    .Select(parameter => _serviceContainer.TryLocateService(parameter.ParameterType, out var service) ? service : null)
+                    .Select(parameter => _serviceProvider.TryGetService(parameter.ParameterType, out var service) ? service : null)
                     .ToArray();
 
                 if (resolvedInstances.All(instance => instance != null))

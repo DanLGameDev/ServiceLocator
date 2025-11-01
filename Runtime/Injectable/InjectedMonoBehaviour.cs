@@ -4,6 +4,18 @@ namespace DGP.ServiceLocator.Injectable
 {
     public abstract class InjectedMonoBehaviour : MonoBehaviour
     {
-        protected virtual void Awake() => this.InjectServices();
+        /// <summary>
+        /// Controls whether to search up the GameObject hierarchy for services before falling back to the global ServiceLocator.
+        /// Default is true.
+        /// </summary>
+        protected virtual bool SearchHierarchy => true;
+
+        protected virtual void Awake()
+        {
+            if (SearchHierarchy)
+                this.InjectFromHierarchy();
+            else
+                this.InjectFromGlobal();
+        }
     }
 }
