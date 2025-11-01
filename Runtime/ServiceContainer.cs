@@ -9,9 +9,10 @@ namespace DGP.ServiceLocator
     {
         public event Action OnServicesListChanged;
 
-        public readonly ServiceContainer ParentContainer;
+        private readonly ServiceContainer _parentContainer;
+        internal readonly PendingServiceQueryList _pendingQueries;
+        
         public readonly Dictionary<Type, object> RegisteredServices = new();
-        public readonly List<ServiceQuery> PendingServiceQueries = new List<ServiceQuery>(capacity: 8);
 
         private readonly Lazy<ServiceInjector> _injector;
         public ServiceInjector Injector => _injector.Value;
@@ -19,15 +20,15 @@ namespace DGP.ServiceLocator
         public ServiceContainer()
         {
             _injector = new Lazy<ServiceInjector>(() => new ServiceInjector(this));
+            _pendingQueries = new PendingServiceQueryList(LocateServiceInternal);
         }
 
-        public ServiceContainer(ServiceContainer parentContainer)
+        public ServiceContainer(ServiceContainer parentContainer) : this()
         {
-            ParentContainer = parentContainer;
-            _injector = new Lazy<ServiceInjector>(() => new ServiceInjector(this));
-
-            if (ParentContainer != null)
-                ParentContainer.OnServicesListChanged += HandleServiceTreeChanged;
+            _parentContainer = parentContainer;
+            
+            if (_parentContainer != null)
+                _parentContainer.OnServicesListChanged += HandleServiceTreeChanged;
         }
 
         #region IEnumerable
@@ -36,8 +37,8 @@ namespace DGP.ServiceLocator
             foreach (var service in RegisteredServices.Values)
                 yield return service;
 
-            if (ParentContainer != null) {
-                foreach (var service in ParentContainer.RegisteredServices.Values)
+            if (_parentContainer != null) {
+                foreach (var service in _parentContainer.RegisteredServices.Values)
                     yield return service;
             }
         }
@@ -47,13 +48,13 @@ namespace DGP.ServiceLocator
 
         ~ServiceContainer()
         {
-            if (ParentContainer != null)
-                ParentContainer.OnServicesListChanged -= HandleServiceTreeChanged;
+            if (_parentContainer != null)
+                _parentContainer.OnServicesListChanged -= HandleServiceTreeChanged;
             
             GC.SuppressFinalize(this);
         }
 
-        private void HandleServiceTreeChanged() => FlushPendingServiceQueries();
+        private void HandleServiceTreeChanged() => _pendingQueries.TryResolvePendingQueries();
 
         #region Registration
 
@@ -73,7 +74,7 @@ namespace DGP.ServiceLocator
             RegisteredServices[type] = service;
 
             OnServicesListChanged?.Invoke();
-            FlushPendingServiceQueries();
+            _pendingQueries.TryResolvePendingQueries();
 
             return service;
         }
@@ -129,28 +130,9 @@ namespace DGP.ServiceLocator
                 return;
             }
 
-            PendingServiceQueries.Add(new ServiceQuery
-            {
-                SearchMode = searchMode,
-                SearchedType = type,
-                CallbackFn = callback
-            });
+            _pendingQueries.Add(new ServiceQuery(type, searchMode, callback));
         }
-
-        private void FlushPendingServiceQueries()
-        {
-            for (int index = PendingServiceQueries.Count - 1; index >= 0; index--) {
-                var query = PendingServiceQueries[index];
-
-                var result = LocateServiceInternal(query.SearchedType, query.SearchMode);
-
-                if (result != null) {
-                    query.CallbackFn(result);
-                    PendingServiceQueries.RemoveAt(index);
-                }
-            }
-        }
-
+        
         /// <summary>
         /// Locates a service synchronously and returns it. If the service is not found, null is returned.
         /// </summary>
@@ -202,8 +184,8 @@ namespace DGP.ServiceLocator
             return searchMode switch
             {
                 ServiceSearchMode.LocalOnly => RegisteredServices.GetValueOrDefault(type),
-                ServiceSearchMode.GlobalFirst => ParentContainer != null && ParentContainer.TryLocateService(type, out var service, searchMode) ? service : LocateServiceInternal(type, ServiceSearchMode.LocalOnly),
-                ServiceSearchMode.LocalFirst => RegisteredServices.GetValueOrDefault(type) ?? ParentContainer?.LocateServiceInternal(type, searchMode),
+                ServiceSearchMode.GlobalFirst => _parentContainer != null && _parentContainer.TryLocateService(type, out var service, searchMode) ? service : LocateServiceInternal(type, ServiceSearchMode.LocalOnly),
+                ServiceSearchMode.LocalFirst => RegisteredServices.GetValueOrDefault(type) ?? _parentContainer?.LocateServiceInternal(type, searchMode),
                 _ => null
             };
         }
@@ -216,7 +198,7 @@ namespace DGP.ServiceLocator
         public void ClearServices()
         {
             RegisteredServices.Clear();
-            PendingServiceQueries.Clear();
+            _pendingQueries.Clear();
 
             Injector?.ClearInjectors();
         }
