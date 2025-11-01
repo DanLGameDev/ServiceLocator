@@ -1,16 +1,15 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using DGP.ServiceLocator.Injectable;
 
 namespace DGP.ServiceLocator
 {
-    public class ServiceContainer : IEnumerable<object>
+    public class ServiceContainer
     {
         public event Action OnServicesListChanged;
 
         private readonly ServiceContainer _parentContainer;
-        internal readonly PendingServiceQueryList _pendingQueries;
+        private readonly PendingServiceQueryList _pendingQueries;
         
         public readonly Dictionary<Type, object> RegisteredServices = new();
 
@@ -30,21 +29,7 @@ namespace DGP.ServiceLocator
             if (_parentContainer != null)
                 _parentContainer.OnServicesListChanged += HandleServiceTreeChanged;
         }
-
-        #region IEnumerable
-        public IEnumerator<object> GetEnumerator()
-        {
-            foreach (var service in RegisteredServices.Values)
-                yield return service;
-
-            if (_parentContainer != null) {
-                foreach (var service in _parentContainer.RegisteredServices.Values)
-                    yield return service;
-            }
-        }
         
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-        #endregion
 
         ~ServiceContainer()
         {
@@ -113,7 +98,6 @@ namespace DGP.ServiceLocator
         /// invoked when the service is registered.
         /// </summary>
         /// <param name="callback">The callback to invoke when the reference is available</param>
-        /// <param name="context">An optional context the service must exist in</param>
         /// <param name="searchMode">The search mode to use when locating services</param>
         /// <typeparam name="TLocatableService">The type of service</typeparam>
         public void LocateServiceAsync<TLocatableService>(Action<TLocatableService> callback, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst) where TLocatableService : class
@@ -121,7 +105,7 @@ namespace DGP.ServiceLocator
             LocateServiceAsync(typeof(TLocatableService), service => callback((TLocatableService)service), searchMode);
         }
 
-        public void LocateServiceAsync(Type type, Action<object> callback, object context = null, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst)
+        public void LocateServiceAsync(Type type, Action<object> callback, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst)
         {
             var result = LocateServiceInternal(type, searchMode);
 
@@ -136,7 +120,6 @@ namespace DGP.ServiceLocator
         /// <summary>
         /// Locates a service synchronously and returns it. If the service is not found, null is returned.
         /// </summary>
-        /// <param name="context">An optional context the service must exist in</param>
         /// <param name="searchMode">The search mode to use when locating the service</param>
         /// <typeparam name="TLocatableService">The type of service to locate</typeparam>
         /// <returns>Returns the service if located, throws an exception if the service is not registered</returns>
@@ -155,7 +138,6 @@ namespace DGP.ServiceLocator
         /// Tries to locate a service and returns true if the service is found.
         /// </summary>
         /// <param name="service">The service if found or null if not</param>
-        /// <param name="context">The context the service must exist in</param>
         /// <param name="searchMode">The search mode to use when locating the service</param>
         /// <typeparam name="TLocatableService">The type of service to locate</typeparam>
         /// <returns></returns>
@@ -170,7 +152,6 @@ namespace DGP.ServiceLocator
         /// </summary>
         /// <param name="type">The type of service to locate</param>
         /// <param name="service">The service if found or null if not</param>
-        /// <param name="context">The context the service must exist in</param>
         /// <param name="searchMode">The search mode to use when locating the service</param>
         /// <returns></returns>
         public bool TryLocateService(Type type, out object service, ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst)
