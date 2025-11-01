@@ -31,15 +31,15 @@ namespace DGP.ServiceLocator.Editor.Tests
         
         private class MyMockOptionalSubscriber
         {
-            [Inject(InjectorFlags.Optional)] public MyMockService MyServiceField;
-            [Inject(InjectorFlags.Optional)] public MyMockService MyServiceProperty { get; set; }
+            [Inject(flags: InjectorFlags.Optional)] public MyMockService MyServiceField;
+            [Inject(flags: InjectorFlags.Optional)] public MyMockService MyServiceProperty { get; set; }
             
         }
         
         private class MyMockAsynchronousSubscriber
         {
-            [Inject(InjectorFlags.Asynchronous)] public MyMockService MyService;
-            [Inject(InjectorFlags.Asynchronous)] public MyMockService MyServiceProperty { get; set; }
+            [Inject(flags: InjectorFlags.Asynchronous)] public MyMockService MyService;
+            [Inject(flags: InjectorFlags.Asynchronous)] public MyMockService MyServiceProperty { get; set; }
         }
         
         private class MyMockMethodSubscriber
@@ -53,7 +53,7 @@ namespace DGP.ServiceLocator.Editor.Tests
             public MyMockService MyService { get; private set; }
             public MyOtherMockService MyOtherService { get; private set; }
             
-            [Inject(InjectorFlags.Optional)] public void InjectServices(MyMockService myService, MyOtherMockService myOtherService) {
+            [Inject(flags: InjectorFlags.Optional)] public void InjectServices(MyMockService myService, MyOtherMockService myOtherService) {
                 MyService = myService;
                 MyOtherService = myOtherService;
             }
@@ -75,7 +75,7 @@ namespace DGP.ServiceLocator.Editor.Tests
             public MyMockService MyService { get; private set; }
             public MyOtherMockService MyOtherService { get; private set; }
             
-            [Inject(InjectorFlags.Asynchronous)] public void InjectServices(MyMockService myService, MyOtherMockService myOtherService) {
+            [Inject(flags: InjectorFlags.Asynchronous)] public void InjectServices(MyMockService myService, MyOtherMockService myOtherService) {
                 MyService = myService;
                 MyOtherService = myOtherService;
             }
@@ -107,8 +107,8 @@ namespace DGP.ServiceLocator.Editor.Tests
 
         private class MockIrreplacableSubscriber
         {
-            [Inject(InjectorFlags.DontReplace)] public MyMockService MyService;
-            [Inject(InjectorFlags.DontReplace)] public MyMockService MyService2 { get; set; }
+            [Inject(flags: InjectorFlags.DontReplace)] public MyMockService MyService;
+            [Inject(flags: InjectorFlags.DontReplace)] public MyMockService MyService2 { get; set; }
         }
 
         private class MockParentClass
@@ -127,7 +127,7 @@ namespace DGP.ServiceLocator.Editor.Tests
         
         private class MockedInterfaceSubscriber
         {
-            [Inject(serviceType:typeof(InterfacedServiceA))] public IMockService MyService;
+            [Inject(serviceType: typeof(InterfacedServiceA))] public IMockService MyService;
         }
         
         private class MockUnmarkedSubscriber

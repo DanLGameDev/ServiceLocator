@@ -6,7 +6,7 @@ namespace DGP.ServiceLocator.Injectable
 {
     public static class ObjectInjectorExtensions
     {
-        const BindingFlags Flags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
+        private const BindingFlags Flags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
 
         public static T InjectLocalServices<T>(this object source, T target)
         {

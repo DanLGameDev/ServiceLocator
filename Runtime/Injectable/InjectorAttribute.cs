@@ -23,7 +23,7 @@ namespace DGP.ServiceLocator.Injectable
         public readonly Type ServiceType;
         public readonly InjectorFlags Flags;
         
-        public InjectAttribute(InjectorFlags flags=default(InjectorFlags), Type serviceType = null)
+        public InjectAttribute(Type serviceType = null, InjectorFlags flags = default(InjectorFlags))
         {
             ServiceType = serviceType;
             Flags = flags;

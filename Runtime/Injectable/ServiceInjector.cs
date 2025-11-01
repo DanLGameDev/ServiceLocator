@@ -82,7 +82,7 @@ namespace DGP.ServiceLocator.Injectable
                 property.SetValue(target, service);
             }
             else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional)) {
-                throw new System.Exception($"Missing dependency for {property.Name}");
+                throw new Exception($"Missing dependency for {property.Name}");
             }
         }
 
@@ -140,7 +140,7 @@ namespace DGP.ServiceLocator.Injectable
                 constructors = typeof(T).GetConstructors(constructorFlags);
 
             if (constructors.Length == 0)
-                throw new System.Exception("Cannot find any valid constructors for type " + typeof(T).Name);
+                throw new Exception("Cannot find any valid constructors for type " + typeof(T).Name);
 
             foreach (var constructor in constructors) {
                 var parameters = constructor.GetParameters();
@@ -182,7 +182,6 @@ namespace DGP.ServiceLocator.Injectable
                 if (resolvedInstances.All(instance => instance != null)) {
                     method.Method.Invoke(method.Target, resolvedInstances);
                     _pendingMethods.RemoveAt(i);
-                    i--;
 
                     foreach (var requiredParam in requiredParams) {
                         _pendingTypes.Remove(requiredParam);

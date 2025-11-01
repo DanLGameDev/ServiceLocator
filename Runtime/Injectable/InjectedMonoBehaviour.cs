@@ -1,4 +1,3 @@
-using DGP.ServiceLocator.Extensions;
 using UnityEngine;
 
 namespace DGP.ServiceLocator.Injectable
