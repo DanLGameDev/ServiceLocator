@@ -1,10 +1,11 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using DGP.ServiceLocator.Injectable;
 
 namespace DGP.ServiceLocator
 {
-    public class ServiceContainer : IServiceProvider
+    public class ServiceContainer : IServiceProvider, IEnumerable<object>
     {
         public event Action OnServicesListChanged;
 
@@ -29,7 +30,13 @@ namespace DGP.ServiceLocator
             if (_parentContainer != null)
                 _parentContainer.OnServicesListChanged += HandleServiceTreeChanged;
         }
-        
+
+
+        public IEnumerator<object> GetEnumerator()
+        {
+            foreach (var service in RegisteredServices.Values)
+                yield return service;
+        }
 
         ~ServiceContainer()
         {
@@ -37,6 +44,11 @@ namespace DGP.ServiceLocator
                 _parentContainer.OnServicesListChanged -= HandleServiceTreeChanged;
             
             GC.SuppressFinalize(this);
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
 
         private void HandleServiceTreeChanged() => _pendingQueries.TryResolvePendingQueries();
