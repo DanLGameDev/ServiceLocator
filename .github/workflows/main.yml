@@ -1,0 +1,68 @@
+name: Test package
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  testAllModes:
+    name: Test in ${{ matrix.testMode }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        unityVersion:
+          - 6000.2.10f1
+        testMode:
+          - playmode
+          - editmode
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      
+      # Restructure for package mode testing
+      - name: Prepare package structure
+        run: |
+          mkdir -p Package
+          shopt -s extglob
+          mv !(Package) Package/ 2>/dev/null || true
+          ls -la
+          ls -la Package/
+
+      - uses: game-ci/unity-test-runner@v4
+        id: tests
+        env:
+          UNITY_LICENSE: ${{ secrets.DAN_UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.DAN_UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.DAN_UNITY_PASSWORD }}
+        with:
+          packageMode: true
+          projectPath: Package
+          unityVersion: ${{ matrix.unityVersion }}
+          testMode: ${{ matrix.testMode }}
+          artifactsPath: ${{ matrix.testMode }}-artifacts
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: ${{ matrix.testMode }} Test Results
+          coverageOptions: 'generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;assemblyFilters:+DGP.EventBus*'
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Test results for ${{ matrix.testMode }}
+          path: ${{ steps.tests.outputs.artifactsPath }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Coverage results for ${{ matrix.testMode }}
+          path: ${{ steps.tests.outputs.coveragePath }}
