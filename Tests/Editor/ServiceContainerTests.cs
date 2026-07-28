@@ -24,6 +24,18 @@ namespace DGP.ServiceLocator.Editor.Tests
         }
 
         [Test]
+        public void TestGetServiceOrDefault() {
+            var container = new ServiceContainer();
+            var myService = new MyMockService();
+
+            Assert.IsNull(container.GetServiceOrDefault<MyMockService>());
+
+            container.RegisterService(myService);
+
+            Assert.AreSame(myService, container.GetServiceOrDefault<MyMockService>());
+        }
+
+        [Test]
         public void TestClearServices() {
             var container = new ServiceContainer();
             

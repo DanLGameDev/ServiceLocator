@@ -146,6 +146,17 @@ namespace DGP.ServiceLocator
             throw new InvalidOperationException($"Service of type {typeof(TLocatableService).Name} not found");
         }
         
+        /// <summary>
+        /// Locates a service synchronously and returns it, or null if the service is not found.
+        /// </summary>
+        /// <param name="searchMode">The search mode to use when locating the service</param>
+        /// <typeparam name="TLocatableService">The type of service to locate</typeparam>
+        /// <returns>Returns the service if located, or null if not registered</returns>
+        public TLocatableService GetServiceOrDefault<TLocatableService>(ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst) where TLocatableService : class
+        {
+            return LocateServiceInternal(typeof(TLocatableService), searchMode) as TLocatableService;
+        }
+
         public bool TryGetService(Type serviceType, out object service)
         {
             return TryLocateService(serviceType, out service, ServiceSearchMode.LocalFirst);

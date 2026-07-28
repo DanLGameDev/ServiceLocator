@@ -102,6 +102,19 @@ namespace DGP.ServiceLocator
         }
 
         /// <summary>
+        /// Locates a service synchronously and returns it, or null if the service is not found.
+        /// </summary>
+        /// <param name="searchMode">The search mode to use when locating the service</param>
+        /// <typeparam name="TLocatableService">The type of service to locate</typeparam>
+        /// <returns>Returns the service if located, or null if not registered</returns>
+        public static TLocatableService GetServiceOrDefault<TLocatableService>(
+            ServiceSearchMode searchMode = ServiceSearchMode.GlobalFirst)
+            where TLocatableService : class
+        {
+            return Instance.GetServiceOrDefault<TLocatableService>(searchMode);
+        }
+
+        /// <summary>
         /// Tries to locate a service and returns true if the service is found.
         /// </summary>
         /// <param name="service">The service if found or null if not</param>
