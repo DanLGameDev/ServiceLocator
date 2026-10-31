@@ -88,9 +88,14 @@ public class MyComponent
     }
 }
 
-// Create and inject in one step
-var component = ServiceLocator.Injector.CreateAndInject<MyComponent>();
+// Create and inject in one step - throws MissingDependencyException if it can't be satisfied
+var component = ServiceLocator.Injector.Create<MyComponent>();
+
+// Or test for it without throwing
+if (ServiceLocator.Injector.TryCreate<MyComponent>(out var created)) { }
 ```
+
+The `[Inject]` constructor is used if there is one (mark at most one). Otherwise the constructor with the most parameters that can be satisfied is used. After construction, the new object's `[Inject]` fields, properties and methods are injected as well.
 
 ### Injection Flags
 
@@ -118,6 +123,13 @@ Specify a different type for injection:
 [Inject(serviceType: typeof(ConcreteService))]
 private IService _service;
 ```
+
+### Injection Rules
+
+- `[Inject]` members declared on base classes are injected too, including private ones.
+- All fields and properties are injected before any `[Inject]` method is called.
+- Injection is all-or-nothing: if a required dependency is missing, a `MissingDependencyException` (with `TargetType`, `MemberName` and `ServiceType`) is thrown and nothing on the target is changed.
+- A misplaced `[Inject]` throws `InvalidOperationException` the first time its type is injected: on a `readonly` field, a property without a setter, a `serviceType` that can't be assigned to the member, or a `serviceType`/`DontReplace` on a method or constructor.
 
 ## Unity MonoBehaviour Integration
 

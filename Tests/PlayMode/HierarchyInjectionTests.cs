@@ -107,7 +107,7 @@ namespace DGP.ServiceLocator.Editor.Tests
         public IEnumerator TestRequiredInjectionThrowsWithoutProvider()
         {
             // Arrange & Act & Assert
-            LogAssert.Expect(LogType.Exception, new System.Text.RegularExpressions.Regex(".*Missing dependency.*"));
+            LogAssert.Expect(LogType.Exception, new System.Text.RegularExpressions.Regex(".*MissingDependencyException.*"));
             _childObject.AddComponent<ChildConsumer>();
             
             yield return null;

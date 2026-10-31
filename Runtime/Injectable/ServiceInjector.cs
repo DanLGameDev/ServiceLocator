@@ -1,14 +1,10 @@
 using System;
-using System.Linq;
-using System.Reflection;
-using DGP.ServiceLocator.Extensions;
+using System.Collections.Generic;
 
 namespace DGP.ServiceLocator.Injectable
 {
     public class ServiceInjector
     {
-        private const BindingFlags Flags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
-
         private readonly IServiceProvider _serviceProvider;
 
         public ServiceInjector(IServiceProvider serviceProvider)
@@ -16,133 +12,116 @@ namespace DGP.ServiceLocator.Injectable
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         }
 
+        /// <summary>
+        /// Fills every [Inject] field and property on the target, then calls its [Inject] methods.
+        /// Nothing is written unless every required dependency can be supplied.
+        /// </summary>
+        /// <exception cref="MissingDependencyException">A required dependency's service was not supplied</exception>
+        /// <exception cref="InvalidOperationException">The target's type marks an [Inject] point that can't be injected</exception>
         public void Inject(object target)
         {
-            InjectFields(target);
-            InjectProperties(target);
-            InjectMethods(target);
+            if (target == null)
+                throw new ArgumentNullException(nameof(target));
+
+            if (!TryInject(target, InjectionPlan.For(target.GetType()), out var missing))
+                throw missing;
         }
 
-        private void InjectFields(object target)
+        /// <summary>
+        /// Constructs T through its [Inject] constructor, or else the constructor with the most parameters that can be satisfied,
+        /// then injects it as <see cref="Inject"/> does.
+        /// </summary>
+        /// <exception cref="MissingDependencyException">No constructor or required dependency could be satisfied</exception>
+        /// <exception cref="InvalidOperationException">T marks an [Inject] point that can't be injected</exception>
+        public T Create<T>() where T : class
         {
-            var fields = target.GetSettableFieldsWithAttribute<InjectAttribute>(Flags);
+            if (!TryCreate<T>(out var instance, out var missing))
+                throw missing;
 
-            foreach (var (fieldInfo, injectAttribute) in fields)
-            {
-                if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && fieldInfo.GetMemberValueOrNull(target) != null)
+            return instance;
+        }
+
+        /// <summary>
+        /// As <see cref="Create{T}"/>, but returns false instead of throwing when a dependency is missing.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">T marks an [Inject] point that can't be injected</exception>
+        public bool TryCreate<T>(out T instance) where T : class => TryCreate(out instance, out _);
+
+        private bool TryCreate<T>(out T instance, out MissingDependencyException missing) where T : class
+        {
+            instance = null;
+
+            var plan = InjectionPlan.For(typeof(T));
+
+            if (!TryConstruct(plan, out var constructed, out missing))
+                return false;
+
+            if (!TryInject(constructed, plan, out missing))
+                return false;
+
+            instance = (T)constructed;
+            return true;
+        }
+
+        private bool TryConstruct(InjectionPlan plan, out object instance, out MissingDependencyException missing)
+        {
+            instance = null;
+            missing = null;
+
+            foreach (var constructor in plan.ConstructorPoints) {
+                if (TryResolveServices(constructor.ServiceTypes, out var services, out var missingType)) {
+                    instance = constructor.Constructor.Invoke(services);
+                    missing = null;
+                    return true;
+                }
+
+                missing ??= new MissingDependencyException(plan.TargetType, "constructor", missingType);
+            }
+
+            return false;
+        }
+
+        private bool TryInject(object target, InjectionPlan plan, out MissingDependencyException missing)
+        {
+            var resolved = new List<(InjectionPoint point, object[] services)>(plan.Points.Length);
+
+            foreach (var point in plan.Points) {
+                if (point.IsAlreadySet(target))
                     continue;
 
-                InjectField(target, fieldInfo, injectAttribute);
-            }
-        }
+                if (TryResolveServices(point.ServiceTypes, out var services, out var missingType)) {
+                    resolved.Add((point, services));
+                    continue;
+                }
 
-        private void InjectField(object target, FieldInfo field, InjectAttribute injectAttribute)
-        {
-            Type intendedType = injectAttribute.ServiceType ?? field.FieldType;
-
-            if (_serviceProvider.TryGetService(intendedType, out object service))
-            {
-                field.SetValue(target, service);
-            }
-            else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional))
-            {
-                throw new Exception($"Missing dependency for {field.Name}");
-            }
-        }
-
-        private void InjectProperties(object target)
-        {
-            var properties = target.GetSettablePropertiesWithAttribute<InjectAttribute>(Flags);
-
-            foreach (var (propertyInfo, injectAttribute) in properties)
-            {
-                if (injectAttribute.Flags.HasFlag(InjectorFlags.DontReplace) && propertyInfo.GetMemberValueOrNull(target) != null)
+                if (point.IsOptional)
                     continue;
 
-                InjectProperty(target, propertyInfo, injectAttribute);
+                missing = new MissingDependencyException(plan.TargetType, point.MemberName, missingType);
+                return false;
             }
+
+            foreach (var (point, services) in resolved) {
+                point.Apply(target, services);
+            }
+
+            missing = null;
+            return true;
         }
 
-        private void InjectProperty(object target, PropertyInfo property, InjectAttribute injectAttribute)
+        private bool TryResolveServices(Type[] serviceTypes, out object[] services, out Type missingType)
         {
-            Type intendedType = injectAttribute.ServiceType ?? property.PropertyType;
+            services = new object[serviceTypes.Length];
 
-            if (_serviceProvider.TryGetService(intendedType, out object service))
-            {
-                property.SetValue(target, service);
-            }
-            else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional))
-            {
-                throw new Exception($"Missing dependency for {property.Name}");
-            }
-        }
-
-        private void InjectMethods(object target)
-        {
-            var methodPair = target.GetMethodsWithAttribute<InjectAttribute>(Flags);
-
-            foreach (var (method, injectAttribute) in methodPair)
-            {
-                var requiredParams = method.GetParameters()
-                    .Select(parameter => parameter.ParameterType)
-                    .ToArray();
-
-                object[] resolvedInstances = requiredParams
-                    .Select(paramType => _serviceProvider.TryGetService(paramType, out var service) ? service : null)
-                    .ToArray();
-
-                if (resolvedInstances.All(instance => instance != null))
-                {
-                    method.Invoke(target, resolvedInstances);
-                }
-                else if (!injectAttribute.Flags.HasFlag(InjectorFlags.Optional))
-                {
-                    throw new Exception($"Missing one or more dependencies for {method.Name}");
-                }
-            }
-        }
-
-        public bool TryCreateAndInject<T>(out T instance, bool allowUnmarkedConstructors = true) where T : class
-        {
-            instance = CreateAndInject<T>(allowUnmarkedConstructors);
-            return instance != null;
-        }
-
-        public T CreateAndInject<T>(bool allowUnmarkedConstructors = true) where T : class
-        {
-            var constructorFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-
-            ConstructorInfo[] constructors = null;
-
-            var markedConstructors = typeof(T).GetConstructorsWithAttribute<InjectAttribute>(constructorFlags);
-
-            if (markedConstructors.Length > 0)
-                constructors = markedConstructors.Select(constructor => constructor.constructorInfo).ToArray();
-            else if (allowUnmarkedConstructors)
-                constructors = typeof(T).GetConstructors(constructorFlags);
-
-            if (constructors.Length == 0)
-                throw new Exception("Cannot find any valid constructors for type " + typeof(T).Name);
-
-            foreach (var constructor in constructors)
-            {
-                var parameters = constructor.GetParameters();
-                object[] resolvedInstances = parameters
-                    .Select(parameter => _serviceProvider.TryGetService(parameter.ParameterType, out var service) ? service : null)
-                    .ToArray();
-
-                if (resolvedInstances.All(instance => instance != null))
-                {
-                    return (T)constructor.Invoke(resolvedInstances);
+            for (var i = 0; i < serviceTypes.Length; i++) {
+                if (!_serviceProvider.TryGetService(serviceTypes[i], out services[i]) || services[i] == null) {
+                    missingType = serviceTypes[i];
+                    return false;
                 }
             }
 
-            return null;
-        }
-
-        public void ClearInjectors()
-        {
-            // Reserved for future use if additional state is added
+            missingType = null;
+            return true;
         }
     }
 }

@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace DGP.ServiceLocator.Extensions
 {
-    public static class ObjectReflectionExtensions
+    internal static class ObjectReflectionExtensions
     {
         public static (PropertyInfo propertyInfo, TAttributeType attribute)[] GetSettablePropertiesWithAttribute<TAttributeType>(this object target, BindingFlags flags) where TAttributeType : Attribute
         {
@@ -27,16 +27,6 @@ namespace DGP.ServiceLocator.Extensions
         public static (FieldInfo fieldInfo, TAttributeType attribute)[] GetFieldsWithAttribute<TAttributeType>(this object target, BindingFlags flags) where TAttributeType : Attribute
         {
             return GetMembersOfTypeWithAttribute<FieldInfo, TAttributeType>(target.GetType().GetFields(flags));
-        }
-
-        public static (MethodInfo methodInfo, TAttributeType attribute)[] GetMethodsWithAttribute<TAttributeType>(this object target, BindingFlags flags) where TAttributeType : Attribute
-        {
-            return GetMembersOfTypeWithAttribute<MethodInfo, TAttributeType>(target.GetType().GetMethods(flags));
-        }
-
-        public static (ConstructorInfo constructorInfo, TAttributeType attribute)[] GetConstructorsWithAttribute<TAttributeType>(this object target, BindingFlags flags) where TAttributeType : Attribute
-        {
-            return GetMembersOfTypeWithAttribute<ConstructorInfo, TAttributeType>(target.GetType().GetConstructors(flags));
         }
 
         private static (TMemberType memberInfo, TAttributeType attribute)[] GetMembersOfTypeWithAttribute<TMemberType, TAttributeType>(TMemberType[] members) where TMemberType : MemberInfo where TAttributeType : Attribute

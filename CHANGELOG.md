@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.0.0] - 2026-10-30
+### Breaking
+- `ServiceInjector.CreateAndInject<T>(bool)` / `TryCreateAndInject<T>(out, bool)` replaced by `Create<T>()` / `TryCreate<T>(out T)`
+- `Create<T>` throws `MissingDependencyException` instead of returning null
+- Missing dependencies throw `MissingDependencyException` instead of `Exception`
+- Invalid `[Inject]` points (readonly fields, setter-less properties, unassignable `serviceType`, `serviceType`/flags on methods or constructors) throw `InvalidOperationException` instead of being skipped
+- Removed `ServiceInjector.ClearInjectors` and `MemberInfoExtensions`; `ObjectReflectionExtensions` is now internal
+### Fixes
+- `[Inject]` constructors are now found; previously they were ignored and any satisfiable constructor was used
+- Private `[Inject]` members declared on base classes are now injected
+- An overridden `[Inject]` method is called once
+### Changes
+- `Create<T>` injects members and methods after construction
+- Injection is all-or-nothing and fields/properties are always injected before methods
+- Reflection runs once per type and is cached
+
 ## [1.8.4] - 2025-08-02
 ### Changes
 - Event now fires before services are cleared
